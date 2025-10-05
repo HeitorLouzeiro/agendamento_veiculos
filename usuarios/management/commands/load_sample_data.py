@@ -189,11 +189,26 @@ class Command(BaseCommand):
             f"\n👨‍🏫 [3/5] Criando {quantidade} professores..."
         )
 
+        # Perguntas e respostas padrão para todos
+        perguntas_respostas = [
+            ('cidade_nascimento', 'São Paulo'),
+            ('nome_mae', 'Maria Silva'),
+            ('animal_estimacao', 'Rex'),
+            ('escola', 'Escola Estadual'),
+            ('comida_favorita', 'Pizza'),
+            ('time', 'Corinthians'),
+            ('livro_favorito', 'Dom Casmurro'),
+            ('professor_favorito', 'Professor João'),
+        ]
+
         professores_criados = []
         for i in range(quantidade):
             first_name = self.fake.first_name()
             last_name = self.fake.last_name()
             username = f"prof{i+1:02d}"
+
+            # Escolhe duas perguntas diferentes aleatoriamente
+            perguntas_escolhidas = random.sample(perguntas_respostas, 2)
 
             professor, created = Usuario.objects.get_or_create(
                 username=username,
@@ -202,7 +217,11 @@ class Command(BaseCommand):
                     'first_name': first_name,
                     'last_name': last_name,
                     'tipo_usuario': 'professor',
-                    'telefone': self.fake.phone_number()
+                    'telefone': self.fake.phone_number(),
+                    'pergunta_seguranca_1': perguntas_escolhidas[0][0],
+                    'resposta_seguranca_1': perguntas_escolhidas[0][1],
+                    'pergunta_seguranca_2': perguntas_escolhidas[1][0],
+                    'resposta_seguranca_2': perguntas_escolhidas[1][1],
                 }
             )
 
