@@ -38,17 +38,14 @@
                 </div>
                 <div class="card-footer bg-transparent">
                     <div class="d-flex justify-content-between mb-2">
-                        <a href="{% url 'agendamentos:detalhe' agendamento.pk %}" class="btn btn-sm btn-outline-info">
-                            <i class="bi bi-eye"></i> Ver Detalhes
+                        <a href="{% url 'agendamentos:detalhe' agendamento.pk %}" class="btn btn-sm btn-outline-info w-100">
+                            <i class="bi bi-eye"></i> Ver Detalhes Completos
                         </a>
                     </div>
                     <div class="d-flex justify-content-between">
-                        <form method="post" action="{% url 'agendamentos:aprovar' agendamento.pk %}" class="flex-fill me-1">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-success w-100" onclick="return confirm('Deseja aprovar este agendamento?')">
-                                <i class="bi bi-check-circle"></i> Aprovar
-                            </button>
-                        </form>
+                        <button type="button" class="btn btn-success flex-fill me-1" data-bs-toggle="modal" data-bs-target="#modalAprovar{{ agendamento.pk }}">
+                            <i class="bi bi-check-circle"></i> Aprovar
+                        </button>
                         <a href="{% url 'agendamentos:reprovar' agendamento.pk %}" class="btn btn-danger flex-fill ms-1">
                             <i class="bi bi-x-circle"></i> Reprovar
                         </a>
@@ -64,4 +61,124 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Modais de Aprovação -->
+{% for agendamento in agendamentos %}
+<div class="modal fade" id="modalAprovar{{ agendamento.pk }}" tabindex="-1" aria-labelledby="modalAprovarLabel{{ agendamento.pk }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalAprovarLabel{{ agendamento.pk }}">
+                    <i class="bi bi-check-circle-fill"></i> Confirmar Aprovação do Agendamento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill"></i> Revise as informações antes de confirmar a aprovação.
+                </div>
+                
+                <h6 class="border-bottom pb-2 mb-3"><i class="bi bi-file-text"></i> Resumo do Agendamento</h6>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-book"></i> Curso:</strong><br>
+                        <span class="text-muted">{{ agendamento.curso.nome }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-person"></i> Professor:</strong><br>
+                        <span class="text-muted">{{ agendamento.professor.get_full_name }}</span>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-car-front"></i> Veículo:</strong><br>
+                        <span class="text-muted">{{ agendamento.veiculo.placa }} - {{ agendamento.veiculo.marca }} {{ agendamento.veiculo.modelo }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-speedometer2"></i> Total de KM:</strong><br>
+                        <span class="text-muted">{{ agendamento.get_total_km }} km</span>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-calendar-event"></i> Data/Hora Início:</strong><br>
+                        <span class="text-muted">{{ agendamento.data_inicio|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-calendar-check"></i> Data/Hora Fim:</strong><br>
+                        <span class="text-muted">{{ agendamento.data_fim|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </div>
+
+                {% if agendamento.observacoes %}
+                <div class="mb-3">
+                    <strong><i class="bi bi-chat-left-text"></i> Observações:</strong><br>
+                    <div class="alert alert-secondary mt-2 mb-0">
+                        {{ agendamento.observacoes }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <h6 class="border-bottom pb-2 mb-3 mt-4"><i class="bi bi-map"></i> Trajetos</h6>
+                
+                {% with trajetos=agendamento.trajetos.all %}
+                {% if trajetos %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th><i class="bi bi-geo-alt"></i> Origem</th>
+                                <th><i class="bi bi-geo-alt-fill"></i> Destino</th>
+                                <th><i class="bi bi-calendar2"></i> Saída</th>
+                                <th><i class="bi bi-calendar2-check"></i> Chegada</th>
+                                <th class="text-end"><i class="bi bi-speedometer"></i> KM</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trajeto in trajetos %}
+                            <tr>
+                                <td>{{ trajeto.origem }}</td>
+                                <td>{{ trajeto.destino }}</td>
+                                <td><small>{{ trajeto.data_saida|date:"d/m/Y H:i" }}</small></td>
+                                <td><small>{{ trajeto.data_chegada|date:"d/m/Y H:i" }}</small></td>
+                                <td class="text-end"><strong>{{ trajeto.quilometragem }} km</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                                <td class="text-end"><strong>{{ agendamento.get_total_km }} km</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Nenhum trajeto cadastrado.</p>
+                {% endif %}
+                {% endwith %}
+
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="bi bi-exclamation-triangle-fill"></i> 
+                    <strong>Atenção:</strong> Ao aprovar, o agendamento será confirmado e o professor será notificado. Esta ação não poderá ser desfeita.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <form method="post" action="{% url 'agendamentos:aprovar' agendamento.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle-fill"></i> Confirmar Aprovação
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}

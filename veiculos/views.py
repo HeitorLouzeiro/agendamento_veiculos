@@ -1,8 +1,9 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from .models import Veiculo
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import get_object_or_404, redirect, render
+
 from .forms import VeiculoForm
+from .models import Veiculo
 
 
 def is_administrador(user):
@@ -30,7 +31,7 @@ def criar_veiculo(request):
             return redirect('veiculos:lista')
     else:
         form = VeiculoForm()
-    
+
     return render(request, 'veiculos/form.html', {'form': form, 'titulo': 'Novo Veículo'})
 
 
@@ -39,7 +40,7 @@ def criar_veiculo(request):
 def editar_veiculo(request, pk):
     """Edita um veículo existente"""
     veiculo = get_object_or_404(Veiculo, pk=pk)
-    
+
     if request.method == 'POST':
         form = VeiculoForm(request.POST, instance=veiculo)
         if form.is_valid():
@@ -48,7 +49,7 @@ def editar_veiculo(request, pk):
             return redirect('veiculos:lista')
     else:
         form = VeiculoForm(instance=veiculo)
-    
+
     return render(request, 'veiculos/form.html', {'form': form, 'titulo': 'Editar Veículo', 'veiculo': veiculo})
 
 
@@ -57,10 +58,10 @@ def editar_veiculo(request, pk):
 def deletar_veiculo(request, pk):
     """Deleta um veículo"""
     veiculo = get_object_or_404(Veiculo, pk=pk)
-    
+
     if request.method == 'POST':
         veiculo.delete()
         messages.success(request, 'Veículo deletado com sucesso!')
         return redirect('veiculos:lista')
-    
+
     return render(request, 'veiculos/deletar.html', {'veiculo': veiculo})

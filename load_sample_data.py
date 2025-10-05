@@ -3,23 +3,26 @@
 Script para carregar dados de exemplo no sistema
 """
 import os
-import django
 from datetime import datetime, timedelta
 
+import django
+
+from agendamentos.models import Agendamento, Trajeto
+from cursos.models import Curso
+from usuarios.models import Usuario
+from veiculos.models import Veiculo
+
 # Configura o Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'agendamento_veiculos.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE',
+                      'agendamento_veiculos.settings')
 django.setup()
 
-from usuarios.models import Usuario
-from cursos.models import Curso
-from veiculos.models import Veiculo
-from agendamentos.models import Agendamento, Trajeto
 
 def criar_dados_exemplo():
     print("=" * 50)
     print("Carregando dados de exemplo...")
     print("=" * 50)
-    
+
     # Criar curso de exemplo
     print("\n1. Criando curso de exemplo...")
     curso, created = Curso.objects.get_or_create(
@@ -34,7 +37,7 @@ def criar_dados_exemplo():
         print(f"   ✓ Curso criado: {curso.nome}")
     else:
         print(f"   → Curso já existe: {curso.nome}")
-    
+
     # Criar segundo curso
     curso2, created = Curso.objects.get_or_create(
         nome="Engenharia Civil",
@@ -48,7 +51,7 @@ def criar_dados_exemplo():
         print(f"   ✓ Curso criado: {curso2.nome}")
     else:
         print(f"   → Curso já existe: {curso2.nome}")
-    
+
     # Criar veículo de exemplo
     print("\n2. Criando veículo de exemplo...")
     veiculo, created = Veiculo.objects.get_or_create(
@@ -64,10 +67,11 @@ def criar_dados_exemplo():
         }
     )
     if created:
-        print(f"   ✓ Veículo criado: {veiculo.placa} - {veiculo.marca} {veiculo.modelo}")
+        print(
+            f"   ✓ Veículo criado: {veiculo.placa} - {veiculo.marca} {veiculo.modelo}")
     else:
         print(f"   → Veículo já existe: {veiculo.placa}")
-    
+
     # Criar segundo veículo
     veiculo2, created = Veiculo.objects.get_or_create(
         placa="XYZ-5678",
@@ -82,10 +86,11 @@ def criar_dados_exemplo():
         }
     )
     if created:
-        print(f"   ✓ Veículo criado: {veiculo2.placa} - {veiculo2.marca} {veiculo2.modelo}")
+        print(
+            f"   ✓ Veículo criado: {veiculo2.placa} - {veiculo2.marca} {veiculo2.modelo}")
     else:
         print(f"   → Veículo já existe: {veiculo2.placa}")
-    
+
     # Criar professor de exemplo
     print("\n3. Criando professor de exemplo...")
     professor, created = Usuario.objects.get_or_create(
@@ -101,16 +106,18 @@ def criar_dados_exemplo():
     if created:
         professor.set_password('senha123')
         professor.save()
-        print(f"   ✓ Professor criado: {professor.get_full_name()} (username: {professor.username}, senha: senha123)")
+        print(
+            f"   ✓ Professor criado: {professor.get_full_name()} (username: {professor.username}, senha: senha123)")
     else:
         print(f"   → Professor já existe: {professor.get_full_name()}")
-    
+
     # Criar agendamento de exemplo
     print("\n4. Criando agendamento de exemplo...")
     data_inicio = datetime.now() + timedelta(days=7)
-    data_inicio = data_inicio.replace(hour=8, minute=0, second=0, microsecond=0)
+    data_inicio = data_inicio.replace(
+        hour=8, minute=0, second=0, microsecond=0)
     data_fim = data_inicio.replace(hour=17, minute=0)
-    
+
     agendamento, created = Agendamento.objects.get_or_create(
         curso=curso,
         professor=professor,
@@ -122,10 +129,11 @@ def criar_dados_exemplo():
             'observacoes': 'Visita técnica à fábrica'
         }
     )
-    
+
     if created:
-        print(f"   ✓ Agendamento criado: {agendamento.curso.nome} - {agendamento.data_inicio.strftime('%d/%m/%Y')}")
-        
+        print(
+            f"   ✓ Agendamento criado: {agendamento.curso.nome} - {agendamento.data_inicio.strftime('%d/%m/%Y')}")
+
         # Criar trajeto para o agendamento
         trajeto = Trajeto.objects.create(
             agendamento=agendamento,
@@ -136,8 +144,9 @@ def criar_dados_exemplo():
             quilometragem=45,
             descricao='Ida para visita técnica na fábrica'
         )
-        print(f"   ✓ Trajeto criado: {trajeto.origem} → {trajeto.destino} ({trajeto.quilometragem} km)")
-        
+        print(
+            f"   ✓ Trajeto criado: {trajeto.origem} → {trajeto.destino} ({trajeto.quilometragem} km)")
+
         trajeto2 = Trajeto.objects.create(
             agendamento=agendamento,
             origem='Fábrica ABC Ltda',
@@ -147,22 +156,25 @@ def criar_dados_exemplo():
             quilometragem=45,
             descricao='Retorno ao campus'
         )
-        print(f"   ✓ Trajeto criado: {trajeto2.origem} → {trajeto2.destino} ({trajeto2.quilometragem} km)")
+        print(
+            f"   ✓ Trajeto criado: {trajeto2.origem} → {trajeto2.destino} ({trajeto2.quilometragem} km)")
     else:
         print(f"   → Agendamento já existe")
-    
+
     print("\n" + "=" * 50)
     print("Dados de exemplo carregados com sucesso!")
     print("=" * 50)
     print("\nResumo:")
     print(f"  • Cursos: {Curso.objects.count()}")
     print(f"  • Veículos: {Veiculo.objects.count()}")
-    print(f"  • Professores: {Usuario.objects.filter(tipo_usuario='professor').count()}")
+    print(
+        f"  • Professores: {Usuario.objects.filter(tipo_usuario='professor').count()}")
     print(f"  • Agendamentos: {Agendamento.objects.count()}")
     print("\nCredenciais de teste:")
     print("  Professor: username='professor1', senha='senha123'")
     print("\nPara criar um administrador, execute: ./create_admin.sh")
     print("=" * 50)
+
 
 if __name__ == '__main__':
     criar_dados_exemplo()

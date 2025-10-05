@@ -157,6 +157,77 @@ $(document).ready(function() {
     // Gerenciamento de formset inline
     let trajetoIndex = {{ formset.total_form_count }};
     
+    // Função para validar datas dos trajetos
+    function validarDatasTrajeto(trajetoForm) {
+        const dataInicio = $('#id_data_inicio').val();
+        const dataFim = $('#id_data_fim').val();
+        const dataSaida = trajetoForm.find('input[name$="-data_saida"]').val();
+        const dataChegada = trajetoForm.find('input[name$="-data_chegada"]').val();
+        
+        let erros = [];
+        
+        // Validação 1: Data de chegada deve ser posterior à data de saída
+        if (dataSaida && dataChegada && dataChegada <= dataSaida) {
+            erros.push('A data de chegada deve ser posterior à data de saída.');
+        }
+        
+        // Validação 2: Data de saída não pode ser anterior ao início do agendamento
+        if (dataInicio && dataSaida && dataSaida < dataInicio) {
+            erros.push('A data de saída não pode ser anterior ao início do agendamento.');
+        }
+        
+        // Validação 3: Data de chegada não pode ser posterior ao fim do agendamento
+        if (dataFim && dataChegada && dataChegada > dataFim) {
+            erros.push('A data de chegada não pode ser posterior ao fim do agendamento.');
+        }
+        
+        return erros;
+    }
+    
+    // Validar em tempo real quando as datas mudarem
+    $(document).on('change', 'input[name$="-data_saida"], input[name$="-data_chegada"], #id_data_inicio, #id_data_fim', function() {
+        $('.trajeto-form').each(function() {
+            const trajetoForm = $(this);
+            const erros = validarDatasTrajeto(trajetoForm);
+            
+            // Remove avisos anteriores
+            trajetoForm.find('.alert-warning-dates').remove();
+            
+            // Adiciona novos avisos se houver erros
+            if (erros.length > 0) {
+                let alertHtml = '<div class="alert alert-warning alert-warning-dates mt-2 mb-0">';
+                alertHtml += '<i class="bi bi-exclamation-triangle-fill"></i> <strong>Atenção:</strong><ul class="mb-0 mt-1">';
+                erros.forEach(erro => {
+                    alertHtml += '<li>' + erro + '</li>';
+                });
+                alertHtml += '</ul></div>';
+                trajetoForm.find('.card-body').append(alertHtml);
+            }
+        });
+    });
+    
+    // Validar ao submeter o formulário
+    $('#agendamentoForm').on('submit', function(e) {
+        let temErros = false;
+        
+        $('.trajeto-form:visible').each(function() {
+            const trajetoForm = $(this);
+            const erros = validarDatasTrajeto(trajetoForm);
+            
+            if (erros.length > 0) {
+                temErros = true;
+            }
+        });
+        
+        if (temErros) {
+            e.preventDefault();
+            alert('Por favor, corrija os erros nos trajetos antes de salvar.');
+            $('html, body').animate({
+                scrollTop: $('.alert-warning-dates:first').offset().top - 100
+            }, 500);
+        }
+    });
+    
     $('#add-trajeto').click(function() {
         let newForm = $('.trajeto-form:first').clone();
         newForm.find('input, textarea, select').each(function() {
@@ -170,6 +241,7 @@ $(document).ready(function() {
         });
         newForm.find('h6').text('Trajeto ' + (trajetoIndex + 1));
         newForm.find('.remove-trajeto').show();
+        newForm.find('.alert-warning-dates').remove(); // Remove alertas do form clonado
         $('#trajetos-container').append(newForm);
         $('#id_trajetos-TOTAL_FORMS').val(trajetoIndex + 1);
         trajetoIndex++;
