@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Deletar Agendamento - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Confirmar Exclusão</h4>
+                </div>
+                <div class="card-body">
+                    <p>Tem certeza que deseja deletar este agendamento?</p>
+                    
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <strong>Curso:</strong> {{ agendamento.curso.nome }}<br>
+                            <strong>Veículo:</strong> {{ agendamento.veiculo.placa }}<br>
+                            <strong>Período:</strong> {{ agendamento.data_inicio|date:"d/m/Y H:i" }} até {{ agendamento.data_fim|date:"d/m/Y H:i" }}<br>
+                            <strong>Status:</strong> <span class="badge status-badge status-{{ agendamento.status }}">{{ agendamento.get_status_display }}</span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-danger">
+                        <i class="bi bi-info-circle"></i> 
+                        Esta ação não pode ser desfeita.
+                    </p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'agendamentos:lista' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Confirmar Exclusão
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

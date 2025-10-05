@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="bi bi-calendar-plus"></i> {{ titulo }}</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" id="agendamentoForm">
+                {% csrf_token %}
+                
+                <h5 class="mb-3">Informações do Agendamento</h5>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.curso.id_for_label }}" class="form-label">{{ form.curso.label }}</label>
+                        {{ form.curso }}
+                        {% if form.curso.errors %}
+                        <div class="text-danger small">{{ form.curso.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.veiculo.id_for_label }}" class="form-label">{{ form.veiculo.label }}</label>
+                        {{ form.veiculo }}
+                        {% if form.veiculo.errors %}
+                        <div class="text-danger small">{{ form.veiculo.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.data_inicio.id_for_label }}" class="form-label">{{ form.data_inicio.label }}</label>
+                        {{ form.data_inicio }}
+                        {% if form.data_inicio.errors %}
+                        <div class="text-danger small">{{ form.data_inicio.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.data_fim.id_for_label }}" class="form-label">{{ form.data_fim.label }}</label>
+                        {{ form.data_fim }}
+                        {% if form.data_fim.errors %}
+                        <div class="text-danger small">{{ form.data_fim.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.observacoes.id_for_label }}" class="form-label">{{ form.observacoes.label }}</label>
+                    {{ form.observacoes }}
+                    {% if form.observacoes.errors %}
+                    <div class="text-danger small">{{ form.observacoes.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <hr class="my-4">
+
+                <h5 class="mb-3">Trajetos</h5>
+                
+                {{ formset.management_form }}
+                
+                <div id="trajetos-container">
+                    {% for form in formset %}
+                    <div class="trajeto-form card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Trajeto {{ forloop.counter }}</h6>
+                                {% if not forloop.first %}
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-trajeto">
+                                    <i class="bi bi-trash"></i> Remover
+                                </button>
+                                {% endif %}
+                            </div>
+                            
+                            {{ form.id }}
+                            {{ form.DELETE }}
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Origem</label>
+                                    {{ form.origem }}
+                                    {% if form.origem.errors %}
+                                    <div class="text-danger small">{{ form.origem.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Destino</label>
+                                    {{ form.destino }}
+                                    {% if form.destino.errors %}
+                                    <div class="text-danger small">{{ form.destino.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Data/Hora Saída</label>
+                                    {{ form.data_saida }}
+                                    {% if form.data_saida.errors %}
+                                    <div class="text-danger small">{{ form.data_saida.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Data/Hora Chegada</label>
+                                    {{ form.data_chegada }}
+                                    {% if form.data_chegada.errors %}
+                                    <div class="text-danger small">{{ form.data_chegada.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Quilometragem (km)</label>
+                                    {{ form.quilometragem }}
+                                    {% if form.quilometragem.errors %}
+                                    <div class="text-danger small">{{ form.quilometragem.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Descrição/Objetivo</label>
+                                {{ form.descricao }}
+                                {% if form.descricao.errors %}
+                                <div class="text-danger small">{{ form.descricao.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <button type="button" class="btn btn-outline-secondary mb-4" id="add-trajeto">
+                    <i class="bi bi-plus-circle"></i> Adicionar Trajeto
+                </button>
+
+                <hr>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'agendamentos:lista' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Salvar Agendamento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Gerenciamento de formset inline
+    let trajetoIndex = {{ formset.total_form_count }};
+    
+    $('#add-trajeto').click(function() {
+        let newForm = $('.trajeto-form:first').clone();
+        newForm.find('input, textarea, select').each(function() {
+            let name = $(this).attr('name');
+            if (name) {
+                name = name.replace('-0-', '-' + trajetoIndex + '-');
+                $(this).attr('name', name);
+                $(this).attr('id', 'id_' + name);
+                $(this).val('');
+            }
+        });
+        newForm.find('h6').text('Trajeto ' + (trajetoIndex + 1));
+        newForm.find('.remove-trajeto').show();
+        $('#trajetos-container').append(newForm);
+        $('#id_trajetos-TOTAL_FORMS').val(trajetoIndex + 1);
+        trajetoIndex++;
+    });
+    
+    $(document).on('click', '.remove-trajeto', function() {
+        let form = $(this).closest('.trajeto-form');
+        form.find('input[name$="-DELETE"]').prop('checked', true);
+        form.hide();
+    });
+});
+</script>
+{% endblock %}

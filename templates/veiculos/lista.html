@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Veículos - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-truck"></i> Gerenciar Veículos</h2>
+        <a href="{% url 'veiculos:criar' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Novo Veículo
+        </a>
+    </div>
+
+    {% if veiculos %}
+    <div class="row">
+        {% for veiculo in veiculos %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-car-front"></i> {{ veiculo.placa }}
+                        </h5>
+                        {% if veiculo.ativo %}
+                        <span class="badge bg-success">Ativo</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inativo</span>
+                        {% endif %}
+                    </div>
+                    <p class="card-text">
+                        <strong>{{ veiculo.marca }} {{ veiculo.modelo }}</strong><br>
+                        <small class="text-muted">
+                            Ano: {{ veiculo.ano }}<br>
+                            {% if veiculo.cor %}Cor: {{ veiculo.cor }}<br>{% endif %}
+                            Capacidade: {{ veiculo.capacidade_passageiros }} passageiros
+                        </small>
+                    </p>
+                    {% if veiculo.observacoes %}
+                    <p class="card-text"><small>{{ veiculo.observacoes|truncatewords:15 }}</small></p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'veiculos:editar' veiculo.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Editar
+                        </a>
+                        <a href="{% url 'veiculos:deletar' veiculo.pk %}" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i> Deletar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Nenhum veículo cadastrado ainda.
+        <a href="{% url 'veiculos:criar' %}" class="alert-link">Criar o primeiro veículo</a>.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

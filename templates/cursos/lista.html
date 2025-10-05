@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Cursos - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-book"></i> Gerenciar Cursos</h2>
+        <a href="{% url 'cursos:criar' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Novo Curso
+        </a>
+    </div>
+
+    {% if cursos %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Limite KM/Mês</th>
+                            <th>Status</th>
+                            <th>Criado em</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for curso in cursos %}
+                        <tr>
+                            <td><strong>{{ curso.nome }}</strong></td>
+                            <td>{{ curso.limite_km_mensal }} km</td>
+                            <td>
+                                {% if curso.ativo %}
+                                <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ curso.criado_em|date:"d/m/Y" }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'cursos:editar' curso.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                <a href="{% url 'cursos:deletar' curso.pk %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Deletar
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Nenhum curso cadastrado ainda.
+        <a href="{% url 'cursos:criar' %}" class="alert-link">Criar o primeiro curso</a>.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes do Agendamento - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-info-circle"></i> Detalhes do Agendamento</h2>
+        <a href="{% url 'agendamentos:lista' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Informações Gerais</h5>
+                    <span class="badge status-badge status-{{ agendamento.status }}">
+                        {{ agendamento.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-book"></i> Curso:</strong><br>
+                            {{ agendamento.curso.nome }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-person"></i> Professor:</strong><br>
+                            {{ agendamento.professor.get_full_name }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-car-front"></i> Veículo:</strong><br>
+                            {{ agendamento.veiculo.placa }} - {{ agendamento.veiculo.marca }} {{ agendamento.veiculo.modelo }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-speedometer2"></i> Total de KM:</strong><br>
+                            {{ total_km }} km
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-calendar-event"></i> Data/Hora Início:</strong><br>
+                            {{ agendamento.data_inicio|date:"d/m/Y H:i" }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-calendar-check"></i> Data/Hora Fim:</strong><br>
+                            {{ agendamento.data_fim|date:"d/m/Y H:i" }}
+                        </div>
+                    </div>
+
+                    {% if agendamento.observacoes %}
+                    <div class="mb-3">
+                        <strong><i class="bi bi-chat-left-text"></i> Observações:</strong><br>
+                        {{ agendamento.observacoes }}
+                    </div>
+                    {% endif %}
+
+                    {% if agendamento.status == 'reprovado' and agendamento.motivo_reprovacao %}
+                    <div class="alert alert-danger">
+                        <strong><i class="bi bi-x-circle"></i> Motivo da Reprovação:</strong><br>
+                        {{ agendamento.motivo_reprovacao }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-map"></i> Trajetos</h5>
+                </div>
+                <div class="card-body">
+                    {% if trajetos %}
+                    {% for trajeto in trajetos %}
+                    <div class="card mb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="bi bi-signpost-2"></i> {{ trajeto.origem }} → {{ trajeto.destino }}
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <small class="text-muted">Saída:</small><br>
+                                    {{ trajeto.data_saida|date:"d/m/Y H:i" }}
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Chegada:</small><br>
+                                    {{ trajeto.data_chegada|date:"d/m/Y H:i" }}
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Quilometragem:</small><br>
+                                    <strong>{{ trajeto.quilometragem }} km</strong>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">Descrição:</small><br>
+                                {{ trajeto.descricao }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">Nenhum trajeto cadastrado.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Ações</h5>
+                </div>
+                <div class="card-body">
+                    {% if agendamento.status == 'pendente' %}
+                        {% if user.is_administrador %}
+                        <a href="{% url 'agendamentos:aprovar' agendamento.pk %}" 
+                           class="btn btn-success w-100 mb-2"
+                           onclick="return confirm('Deseja aprovar este agendamento?')">
+                            <i class="bi bi-check-circle"></i> Aprovar
+                        </a>
+                        <a href="{% url 'agendamentos:reprovar' agendamento.pk %}" 
+                           class="btn btn-danger w-100 mb-2">
+                            <i class="bi bi-x-circle"></i> Reprovar
+                        </a>
+                        {% endif %}
+                        
+                        {% if agendamento.professor == user or user.is_administrador %}
+                        <a href="{% url 'agendamentos:editar' agendamento.pk %}" 
+                           class="btn btn-primary w-100 mb-2">
+                            <i class="bi bi-pencil"></i> Editar
+                        </a>
+                        <a href="{% url 'agendamentos:deletar' agendamento.pk %}" 
+                           class="btn btn-outline-danger w-100">
+                            <i class="bi bi-trash"></i> Deletar
+                        </a>
+                        {% endif %}
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i> 
+                        Este agendamento não pode mais ser editado.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-clock-history"></i> Histórico</h6>
+                </div>
+                <div class="card-body">
+                    <small class="text-muted">Criado em:</small><br>
+                    {{ agendamento.criado_em|date:"d/m/Y H:i" }}<br><br>
+                    <small class="text-muted">Última atualização:</small><br>
+                    {{ agendamento.atualizado_em|date:"d/m/Y H:i" }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

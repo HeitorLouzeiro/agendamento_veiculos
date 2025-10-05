@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="bi bi-calendar3"></i> Calendário de Agendamentos</h2>
+                <a href="{% url 'agendamentos:criar' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Novo Agendamento
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Legenda</h5>
+                    <div class="d-flex gap-3">
+                        <div>
+                            <span class="badge status-badge status-pendente">Pendente</span>
+                            Aguardando aprovação
+                        </div>
+                        <div>
+                            <span class="badge status-badge status-aprovado">Aprovado</span>
+                            Agendamento confirmado
+                        </div>
+                        <div>
+                            <span class="badge status-badge status-reprovado">Reprovado</span>
+                            Agendamento recusado
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        locale: 'pt-br',
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Hoje',
+            month: 'Mês',
+            week: 'Semana',
+            day: 'Dia'
+        },
+        height: 'auto',
+        navLinks: true,
+        editable: false,
+        dayMaxEvents: true,
+        events: '{% url "agendamentos:json" %}',
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            if (info.event.url) {
+                window.location.href = info.event.url;
+            }
+        },
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        },
+        slotLabelFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        },
+        dateClick: function(info) {
+            // Redireciona para criar agendamento com data pré-selecionada
+            var dataInicio = info.dateStr + 'T08:00';
+            var dataFim = info.dateStr + 'T17:00';
+            window.location.href = '{% url "agendamentos:criar" %}?data_inicio=' + dataInicio + '&data_fim=' + dataFim;
+        }
+    });
+    
+    calendar.render();
+});
+</script>
+{% endblock %}

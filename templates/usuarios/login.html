@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-car-front-fill text-primary" style="font-size: 3rem;"></i>
+                        <h3 class="mt-3">Sistema de Agendamento</h3>
+                        <p class="text-muted">Faça login para continuar</p>
+                    </div>
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <strong>Erro!</strong> Usuário ou senha incorretos.
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label">Usuário</label>
+                            <input type="text" name="username" class="form-control" id="id_username" required autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_password" class="form-label">Senha</label>
+                            <input type="password" name="password" class="form-control" id="id_password" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-box-arrow-in-right"></i> Entrar
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <p class="mb-0">Não tem uma conta?</p>
+                        <a href="{% url 'registro' %}" class="btn btn-outline-primary mt-2">
+                            <i class="bi bi-person-plus"></i> Registrar-se como Professor
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
