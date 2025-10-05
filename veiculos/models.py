@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 
 
@@ -5,6 +7,12 @@ class Veiculo(models.Model):
     """
     Model para representar veículos disponíveis para agendamento.
     """
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name='ID'
+    )
     placa = models.CharField(max_length=10, unique=True, verbose_name='Placa')
     modelo = models.CharField(max_length=100, verbose_name='Modelo')
     marca = models.CharField(max_length=100, verbose_name='Marca')
@@ -16,51 +24,56 @@ class Veiculo(models.Model):
     )
     observacoes = models.TextField(blank=True, verbose_name='Observações')
     ativo = models.BooleanField(default=True, verbose_name='Ativo')
-    criado_em = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
-    atualizado_em = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
-    
+    criado_em = models.DateTimeField(
+        auto_now_add=True, verbose_name='Criado em')
+    atualizado_em = models.DateTimeField(
+        auto_now=True, verbose_name='Atualizado em')
+
     class Meta:
         verbose_name = 'Veículo'
         verbose_name_plural = 'Veículos'
         ordering = ['placa']
-    
+
     def __str__(self):
         return f"{self.placa} - {self.marca} {self.modelo}"
-    
+
     def tem_conflito(self, data_inicio, data_fim, agendamento_id=None):
         """
         Verifica se há conflito de agendamento para este veículo no período especificado.
-        
+
         Args:
             data_inicio: Data/hora de início do agendamento
             data_fim: Data/hora de fim do agendamento
             agendamento_id: ID do agendamento atual (para edição)
-        
+
         Returns:
             True se houver conflito, False caso contrário
         """
-        from agendamentos.models import Agendamento
         from django.db.models import Q
-        
+
+        from agendamentos.models import Agendamento
+
         # Query para verificar sobreposição de datas
         conflitos = Agendamento.objects.filter(
             veiculo=self,
-            status__in=['pendente', 'aprovado']  # Considera pendentes e aprovados
+            # Considera pendentes e aprovados
+            status__in=['pendente', 'aprovado']
         ).filter(
             Q(data_inicio__lt=data_fim) & Q(data_fim__gt=data_inicio)
         )
-        
+
         # Exclui o próprio agendamento se estiver editando
         if agendamento_id:
             conflitos = conflitos.exclude(id=agendamento_id)
-        
+
         return conflitos.exists()
-    
+
     def get_agendamentos_periodo(self, data_inicio, data_fim):
         """Retorna agendamentos do veículo em um período"""
-        from agendamentos.models import Agendamento
         from django.db.models import Q
-        
+
+        from agendamentos.models import Agendamento
+
         return Agendamento.objects.filter(
             veiculo=self,
             status__in=['pendente', 'aprovado']

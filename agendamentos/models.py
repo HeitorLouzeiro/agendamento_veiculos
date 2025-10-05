@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -13,6 +15,12 @@ class Agendamento(models.Model):
         ('reprovado', 'Reprovado'),
     ]
 
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name='ID'
+    )
     curso = models.ForeignKey(
         'cursos.Curso',
         on_delete=models.CASCADE,
@@ -155,6 +163,12 @@ class Trajeto(models.Model):
     Model para representar trajetos de um agendamento.
     Um agendamento pode ter múltiplos trajetos.
     """
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name='ID'
+    )
     agendamento = models.ForeignKey(
         Agendamento,
         on_delete=models.CASCADE,

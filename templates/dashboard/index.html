@@ -2,6 +2,71 @@
 
 {% block title %}Dashboard - Sistema de Agendamento{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Ajustes para dispositivos móveis */
+    @media (max-width: 768px) {
+        /* Empilha os botões do calendário verticalmente */
+        .fc .fc-toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .fc .fc-toolbar-chunk {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        /* Botões de navegação (prev, next, today) */
+        .fc .fc-toolbar-chunk:first-child {
+            order: 2;
+        }
+        
+        /* Título do mês */
+        .fc .fc-toolbar-chunk:nth-child(2) {
+            order: 1;
+            margin-bottom: 10px;
+        }
+        
+        /* Botões de visualização (mês, semana, dia) */
+        .fc .fc-toolbar-chunk:last-child {
+            order: 3;
+        }
+        
+        .fc .fc-toolbar-chunk .fc-button-group {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .fc .fc-button {
+            width: 100%;
+            margin: 2px 0 !important;
+        }
+        
+        .fc .fc-toolbar h2 {
+            font-size: 1.2rem;
+        }
+        
+        /* Ajusta a legenda para mobile */
+        .legend-mobile {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .legend-mobile {
+            display: flex;
+            gap: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="row mb-4">
@@ -30,7 +95,7 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Legenda</h5>
-                    <div class="d-flex gap-3">
+                    <div class="legend-mobile">
                         <div>
                             <span class="badge status-badge status-pendente">Pendente</span>
                             Aguardando aprovação
