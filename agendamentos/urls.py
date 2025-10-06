@@ -14,4 +14,8 @@ urlpatterns = [
     path('<uuid:pk>/aprovar/', views.aprovar_agendamento, name='aprovar'),
     path('<uuid:pk>/reprovar/', views.reprovar_agendamento, name='reprovar'),
     path('json/', views.agendamentos_json, name='json'),
+    
+    # Relatórios
+    path('relatorios/', views.relatorio_geral, name='relatorio_geral'),
+    path('relatorios/curso/', views.relatorio_por_curso, name='relatorio_por_curso'),
 ]

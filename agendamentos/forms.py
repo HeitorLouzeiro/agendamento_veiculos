@@ -93,7 +93,77 @@ class AgendamentoForm(forms.ModelForm):
                     'veiculo': msg
                 })
 
+        # Validação de limite de KM do curso (só se já temos o total de KM dos trajetos)
+        curso = cleaned_data.get('curso')
+        if curso and data_inicio and hasattr(self, '_trajetos_km'):
+            total_km_trajetos = self._trajetos_km
+            
+            if total_km_trajetos > 0:  # Só valida se há KM para validar
+                ano = data_inicio.year
+                mes = data_inicio.month
+                
+                # Calcula KM já utilizados no mês
+                km_utilizados = curso.get_km_utilizados_mes(ano, mes)
+                
+                # Se estiver editando, subtrai os KM antigos deste agendamento
+                if self.instance and self.instance.id:
+                    km_utilizados -= self.instance.get_total_km()
+                
+                # Verifica se excede o limite
+                km_total = km_utilizados + total_km_trajetos
+                
+                if km_total > curso.limite_km_mensal:
+                    km_disponiveis = curso.limite_km_mensal - km_utilizados
+                    raise ValidationError({
+                        'curso': (
+                            f"Este agendamento ultrapassa o limite mensal de "
+                            f"{curso.limite_km_mensal} km do curso {curso.nome}. "
+                            f"KM já utilizados no mês: {km_utilizados} km. "
+                            f"KM disponíveis: {km_disponiveis} km. "
+                            f"KM solicitados: {total_km_trajetos} km."
+                        )
+                    })
+
         return cleaned_data
+    
+    def set_trajetos_km(self, total_km):
+        """Método para definir o total de KM dos trajetos para validação"""
+        self._trajetos_km = total_km
+    
+    def validar_limite_km_manual(self, total_km_trajetos):
+        """
+        Valida manualmente o limite de KM do curso.
+        Usado quando precisamos validar antes de salvar.
+        """
+        if not self.cleaned_data:
+            return
+            
+        curso = self.cleaned_data.get('curso')
+        data_inicio = self.cleaned_data.get('data_inicio')
+        
+        if curso and data_inicio and total_km_trajetos > 0:
+            ano = data_inicio.year
+            mes = data_inicio.month
+            
+            # Calcula KM já utilizados no mês
+            km_utilizados = curso.get_km_utilizados_mes(ano, mes)
+            
+            # Se estiver editando, subtrai os KM antigos deste agendamento
+            if self.instance and self.instance.id:
+                km_utilizados -= self.instance.get_total_km()
+            
+            # Verifica se excede o limite
+            km_total = km_utilizados + total_km_trajetos
+            
+            if km_total > curso.limite_km_mensal:
+                km_disponiveis = curso.limite_km_mensal - km_utilizados
+                raise ValidationError(
+                    f"Este agendamento ultrapassa o limite mensal de "
+                    f"{curso.limite_km_mensal} km do curso {curso.nome}. "
+                    f"KM já utilizados no mês: {km_utilizados} km. "
+                    f"KM disponíveis: {km_disponiveis} km. "
+                    f"KM solicitados: {total_km_trajetos} km."
+                )
 
 
 class TrajetoForm(forms.ModelForm):

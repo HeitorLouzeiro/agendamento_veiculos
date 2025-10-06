@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatório por Curso - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-book"></i> Relatório por Curso</h2>
+        <div class="btn-group">
+            <a href="{% url 'agendamentos:relatorio_geral' %}" class="btn btn-outline-primary">
+                <i class="bi bi-bar-chart"></i> Geral
+            </a>
+            <a href="{% url 'agendamentos:relatorio_por_curso' %}" class="btn btn-primary">
+                <i class="bi bi-book"></i> Por Curso
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="bi bi-funnel"></i> Filtros</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Curso</label>
+                    <select name="curso" class="form-select" required>
+                        {% for curso_opt in cursos_disponiveis %}
+                        <option value="{{ curso_opt.id }}" {% if curso_opt.id == curso.id %}selected{% endif %}>{{ curso_opt.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Ano</label>
+                    <select name="ano" class="form-select">
+                        {% for ano_opt in anos_disponiveis %}
+                        <option value="{{ ano_opt }}" {% if ano_opt == ano %}selected{% endif %}>{{ ano_opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumo do Curso -->
+    <div class="alert alert-primary">
+        <h5><i class="bi bi-info-circle"></i> {{ curso.nome }} - {{ ano }}</h5>
+        <div class="row">
+            <div class="col-md-3">
+                <strong>Limite Mensal:</strong> {{ curso.limite_km_mensal }} km
+            </div>
+            <div class="col-md-3">
+                <strong>Limite Anual:</strong> {{ stats_ano.limite_anual }} km
+            </div>
+            <div class="col-md-3">
+                <strong>KM Utilizados:</strong> {{ stats_ano.total_km }} km
+            </div>
+            <div class="col-md-3">
+                <strong>% Uso Anual:</strong> {{ stats_ano.percentual_uso_anual|floatformat:1 }}%
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats_ano.agendamentos_aprovados }}</h4>
+                            <p class="card-text">Aprovados</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-check-circle fs-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats_ano.agendamentos_pendentes }}</h4>
+                            <p class="card-text">Pendentes</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-clock fs-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats_ano.agendamentos_reprovados }}</h4>
+                            <p class="card-text">Reprovados</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-x-circle fs-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats_ano.total_km }}</h4>
+                            <p class="card-text">Total KM</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-speedometer2 fs-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dados Mensais -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="bi bi-calendar-month"></i> Dados Mensais - {{ ano }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Mês</th>
+                            <th>KM Utilizados</th>
+                            <th>KM Disponíveis</th>
+                            <th>% do Limite</th>
+                            <th>Agendamentos</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dados in dados_mensais %}
+                        <tr>
+                            <td><strong>{{ dados.mes_nome }}</strong></td>
+                            <td>{{ dados.km_utilizados }} km</td>
+                            <td>
+                                {% if dados.km_disponiveis < 0 %}
+                                    <span class="text-danger">{{ dados.km_disponiveis }} km</span>
+                                {% else %}
+                                    <span class="text-success">{{ dados.km_disponiveis }} km</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    {% if dados.percentual_limite > 100 %}
+                                        <div class="progress-bar bg-danger" style="width: 100%">
+                                            {{ dados.percentual_limite|floatformat:1 }}%
+                                        </div>
+                                    {% elif dados.percentual_limite > 80 %}
+                                        <div class="progress-bar bg-warning" style="width: {{ dados.percentual_limite|floatformat:0 }}%">
+                                            {{ dados.percentual_limite|floatformat:1 }}%
+                                        </div>
+                                    {% else %}
+                                        <div class="progress-bar bg-success" style="width: {{ dados.percentual_limite|floatformat:0 }}%">
+                                            {{ dados.percentual_limite|floatformat:1 }}%
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>{{ dados.agendamentos }}</td>
+                            <td>
+                                {% if dados.percentual_limite > 100 %}
+                                    <span class="badge bg-danger">Excedido</span>
+                                {% elif dados.percentual_limite > 80 %}
+                                    <span class="badge bg-warning">Atenção</span>
+                                {% else %}
+                                    <span class="badge bg-success">Normal</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Agendamentos do Ano -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="bi bi-list"></i> Todos os Agendamentos de {{ ano }} ({{ agendamentos_ano.count }})</h5>
+        </div>
+        <div class="card-body">
+            {% if agendamentos_ano %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Professor</th>
+                            <th>Veículo</th>
+                            <th>Status</th>
+                            <th>KM</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for agendamento in agendamentos_ano %}
+                        <tr>
+                            <td>
+                                <small>
+                                    {{ agendamento.data_inicio|date:"d/m/Y H:i" }}<br>
+                                    até {{ agendamento.data_fim|date:"d/m/Y H:i" }}
+                                </small>
+                            </td>
+                            <td>{{ agendamento.professor.get_full_name }}</td>
+                            <td>{{ agendamento.veiculo.placa }}</td>
+                            <td>
+                                {% if agendamento.status == 'aprovado' %}
+                                    <span class="badge bg-success">{{ agendamento.get_status_display }}</span>
+                                {% elif agendamento.status == 'pendente' %}
+                                    <span class="badge bg-warning">{{ agendamento.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ agendamento.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ agendamento.get_total_km }} km</td>
+                            <td>
+                                <a href="{% url 'agendamentos:detalhe' agendamento.pk %}" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-calendar-x fs-1 text-muted"></i>
+                <p class="text-muted mt-2">Nenhum agendamento encontrado para {{ curso.nome }} em {{ ano }}.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
