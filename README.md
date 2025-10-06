@@ -1,20 +1,4 @@
-# 🚗 Sist## 📋 Sumário
-
-- [🚀 Início Rápido](#-início-rápido)
-- [🏗️ Arquitetura](#%EF%B8%8F-arquitetura)
-- [✨ Funcionalidades](#-funcionalidades)
-- [🛠️ Tecnologias](#%EF%B8%8F-tecnologias)
-- [📦 Instalação](#-instalação)
-- [🔧 Configuração](#-configuração)
-- [⚡ Scripts de Automação](#-scripts-de-automação)
-- [🏃‍♂️ Comandos Úteis](#%EF%B8%8F-comandos-úteis)
-- [📖 Uso do Sistema](#-uso-do-sistema)
-- [🔒 Sistema de Autenticação](#-sistema-de-autenticação)
-- [📁 Estrutura do Projeto](#-estrutura-do-projeto)
-- [🗄️ Modelos de Dados](#%EF%B8%8F-modelos-de-dados)
-- [👤 Autor](#-autor)
-- [🤝 Contribuição](#-contribuição)
-- [📜 Licença](#-licença)to de Veículos
+# 🚗 Sistema de Agendamento de Veículos
 
 Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com **Django 5.2** e **Python 3.12**, com controle de quilometragem, trajetos e sistema de aprovação.
 
@@ -31,12 +15,13 @@ Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com 
 - [🛠️ Tecnologias](#%EF%B8%8F-tecnologias)
 - [📦 Instalação](#-instalação)
 - [🔧 Configuração](#-configuração)
+- [⚡ Scripts de Automação](#-scripts-de-automação)
 - [🏃‍♂️ Comandos Úteis](#%EF%B8%8F-comandos-úteis)
 - [📖 Uso do Sistema](#-uso-do-sistema)
 - [🔒 Sistema de Autenticação](#-sistema-de-autenticação)
 - [📁 Estrutura do Projeto](#-estrutura-do-projeto)
 - [🗄️ Modelos de Dados](#%EF%B8%8F-modelos-de-dados)
-- [� Autor](#-autor)
+- [👤 Autor](#-autor)
 - [🤝 Contribuição](#-contribuição)
 - [📜 Licença](#-licença)
 
@@ -220,6 +205,51 @@ Execute `python manage.py load_sample_data` para criar:
 - 📅 **30 agendamentos** com status variados
 - 🗺️ **Trajetos** associados aos agendamentos aprovados
 
+### 👤 Usuários de Teste
+
+Para facilitar o teste do sistema de recuperação de senha, aqui estão as credenciais e respostas de segurança dos usuários padrão:
+
+#### **🔐 Administrador Principal**
+| Campo | Valor |
+|-------|-------|
+| **E-mail** | `admin@sistema.com` |
+| **Username** | `admin` |
+| **Senha** | `admin123` |
+
+**Perguntas de Segurança:**
+| Pergunta | Resposta |
+|----------|----------|
+| Qual é o nome da sua mãe? | `Maria` |
+| Qual é o nome do seu primeiro animal de estimação? | `Rex` |
+| Em que cidade você nasceu? | `São Paulo` |
+
+#### **👨‍🏫 Professor de Teste**
+| Campo | Valor |
+|-------|-------|
+| **E-mail** | `professor@teste.com` |
+| **Username** | `professor` |
+| **Senha** | `prof123` |
+
+**Perguntas de Segurança:**
+| Pergunta | Resposta |
+|----------|----------|
+| Qual é o nome da sua escola primária? | `Santos Dumont` |
+| Qual é seu filme favorito? | `Matrix` |
+| Qual é sua comida favorita? | `Pizza` |
+
+#### **🧪 Como Testar a Recuperação de Senha**
+
+1. **Acesse:** `/usuarios/recuperar-senha/`
+2. **Digite:** `admin@sistema.com` ou `admin`
+3. **Responda:**
+   - Nome da mãe: `Maria`
+   - Nome do animal: `Rex` 
+   - Cidade natal: `São Paulo`
+4. **Defina uma nova senha** seguindo os critérios de segurança
+5. **Faça login** com a nova senha
+
+> ⚠️ **Atenção:** As respostas são **case-sensitive**. Digite exatamente como mostrado acima!
+
 ## 🔧 Configuração
 
 ### Variáveis de Ambiente
@@ -340,6 +370,29 @@ python manage.py createsuperuser           # Criar administrador
 python manage.py collectstatic             # Arquivos estáticos
 python manage.py shell                     # Shell Django
 python manage.py load_sample_data          # Dados de exemplo
+
+# Gerenciamento de usuários
+python manage.py changepassword <username>  # Alterar senha de usuário
+python manage.py create_test_users          # Criar usuários de teste
+python manage.py list_users                 # Listar todos os usuários
+
+# Recuperação de senha (via shell)
+python manage.py shell -c "
+from usuarios.models import Usuario
+user = Usuario.objects.get(email='admin@sistema.com')
+user.set_password('nova_senha_123')
+user.save()
+print('Senha alterada com sucesso!')
+"
+
+# Verificar perguntas de segurança de um usuário
+python manage.py shell -c "
+from usuarios.models import Usuario
+user = Usuario.objects.get(email='admin@sistema.com')
+print(f'Pergunta 1: {user.pergunta_seguranca_1}')
+print(f'Pergunta 2: {user.pergunta_seguranca_2}') 
+print(f'Pergunta 3: {user.pergunta_seguranca_3}')
+"
 ```
 
 ## 📖 Uso do Sistema
@@ -410,7 +463,110 @@ Acesse `/admin/` para usar a interface administrativa completa do Django com rec
 - ✅ Proteção CSRF e validação de senhas fortes
 - ✅ Rotas protegidas por nível de acesso
 
-## �📁 Estrutura do Projeto
+### 🔐 Sistema de Recuperação de Senha
+
+O sistema possui um processo seguro de recuperação de senha em **3 etapas** usando perguntas de segurança:
+
+#### **Etapa 1: Identificação do Usuário**
+- Informe seu **e-mail** ou **nome de usuário**
+- Sistema verifica se o usuário existe
+
+#### **Etapa 2: Perguntas de Segurança**
+Responda **2 perguntas de segurança** cadastradas durante o registro:
+
+| Pergunta | Exemplo de Resposta |
+|----------|-------------------|
+| **Qual é o nome da sua mãe?** | `Maria Silva` |
+| **Qual é o nome do seu primeiro animal de estimação?** | `Rex` |
+| **Em que cidade você nasceu?** | `São Paulo` |
+| **Qual é o nome da sua escola primária?** | `Escola Santos Dumont` |
+| **Qual é seu filme favorito?** | `Cidade de Deus` |
+| **Qual é sua comida favorita?** | `Pizza` |
+| **Qual é o nome do seu melhor amigo de infância?** | `João` |
+| **Em que ano você se formou no ensino médio?** | `2015` |
+| **Qual é o modelo do seu primeiro carro?** | `Civic` |
+| **Qual é o nome da rua onde você cresceu?** | `Rua das Flores` |
+
+#### **Etapa 3: Nova Senha**
+- Após validar as respostas, defina sua **nova senha**
+- A senha deve atender aos critérios de segurança
+
+#### **🔒 Critérios de Senha Segura**
+- ✅ Mínimo de **8 caracteres**
+- ✅ Pelo menos **1 letra maiúscula**
+- ✅ Pelo menos **1 letra minúscula**
+- ✅ Pelo menos **1 número**
+- ✅ Pelo menos **1 caractere especial** (@, #, $, %, etc.)
+
+#### **⚠️ Importante**
+- As respostas são **case-sensitive** (diferencia maiúsculas/minúsculas)
+- Mantenha suas respostas **exatamente** como cadastradas
+- Em caso de esquecimento, contate o administrador do sistema
+
+### 🎯 Fluxo de Recuperação
+
+```mermaid
+graph TD
+    A[Esqueci minha senha] --> B[Informar e-mail/usuário]
+    B --> C[Responder 2 perguntas de segurança]
+    C --> D{Respostas corretas?}
+    D -->|Sim| E[Definir nova senha]
+    D -->|Não| F[Erro - Tentar novamente]
+    E --> G[Login com nova senha]
+    F --> C
+```
+
+### 🧪 Usuários de Teste
+
+Para testar o sistema de recuperação de senha, use estes usuários pré-configurados:
+
+#### **Admin Principal**
+- **E-mail:** `admin@sistema.com`
+- **Username:** `admin`
+- **Senha:** `admin123`
+- **Perguntas de Segurança:**
+  - *Qual é o nome da sua mãe?* → `Maria`
+  - *Qual é o nome do seu primeiro animal de estimação?* → `Rex`
+
+#### **Professor de Teste**
+- **E-mail:** `professor@teste.com`
+- **Username:** `professor`
+- **Senha:** `prof123`
+- **Perguntas de Segurança:**
+  - *Em que cidade você nasceu?* → `São Paulo`
+  - *Qual é sua comida favorita?* → `Pizza`
+
+### 🔧 Comandos de Gerenciamento de Senha
+
+```bash
+# Alterar senha via Django Admin
+python manage.py changepassword admin
+
+# Criar superusuário
+python manage.py createsuperuser
+
+# Shell interativo para manipular usuários
+python manage.py shell
+```
+
+**Exemplo no shell:**
+```python
+from usuarios.models import Usuario
+
+# Encontrar usuário
+user = Usuario.objects.get(email='admin@sistema.com')
+
+# Alterar respostas de segurança
+user.resposta_seguranca_1 = 'Nova Resposta'
+user.resposta_seguranca_2 = 'Outra Resposta'
+user.save()
+
+# Verificar respostas
+print(f"Pergunta 1: {user.pergunta_seguranca_1}")
+print(f"Resposta 1: {user.resposta_seguranca_1}")
+```
+
+## 📁 Estrutura do Projeto
 
 ```
 agendamento_veiculos/
@@ -583,7 +739,7 @@ class Trajeto(models.Model):
 **Propriedades:**
 - `km_percorridos` - Calcula a diferença entre KM final e inicial
 
-## � Autor
+## 👤 Autor
 
 **Heitor Louzeiro** - *Desenvolvedor Principal*
 - GitHub: [@HeitorLouzeiro](https://github.com/HeitorLouzeiro)
@@ -620,7 +776,7 @@ chore: Tarefas de manutenção
 
 ## 📜 Licença
 
-Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+Este projeto está licenciado sob a Apache License - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
