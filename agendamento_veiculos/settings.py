@@ -10,22 +10,38 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Carregar variáveis de ambiente do arquivo .env
+# Nota: o carregamento também é feito em manage.py, wsgi.py e asgi.py
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    # Se python-dotenv não estiver instalado, continua sem erro
+    pass
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%@rr-2m0w9ng*6b91rko)=7g27#c96wlo82(ziu((r_dz6kiwt'
+SECRET_KEY = os.getenv(
+    'SECRET_KEY', 
+    'django-insecure-%@rr-2m0w9ng*6b91rko)=7g27#c96wlo82(ziu((r_dz6kiwt'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes', 'on')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip() 
+    for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+    if host.strip()
+]
 
 
 # Application definition
@@ -108,9 +124,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'pt-br'
+LANGUAGE_CODE = os.getenv('LANGUAGE_CODE', 'pt-br')
 
-TIME_ZONE = 'America/Sao_Paulo'
+TIME_ZONE = os.getenv('TIME_ZONE', 'America/Sao_Paulo')
 
 USE_I18N = True
 

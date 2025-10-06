@@ -31,6 +31,12 @@ class Command(BaseCommand):
             default=20,
             help='Quantidade de agendamentos a criar (padrão: 20)'
         )
+        parser.add_argument(
+            '--administradores',
+            type=int,
+            default=3,
+            help='Quantidade de administradores a criar (padrão: 3)'
+        )
 
     def handle(self, *args, **options):
         """Método principal do comando"""
@@ -45,6 +51,9 @@ class Command(BaseCommand):
 
         try:
             # Cria dados em sequência
+            administradores = self.criar_administradores(
+                quantidade=options['administradores']
+            )
             cursos = self.criar_cursos()
             veiculos = self.criar_veiculos()
             professores = self.criar_professores(
@@ -72,9 +81,90 @@ class Command(BaseCommand):
             traceback.print_exc()
             return
 
+    def criar_administradores(self, quantidade=3):
+        """Cria administradores do sistema"""
+        self.stdout.write(
+            f"\n👔 [1/5] Criando {quantidade} administradores..."
+        )
+
+        # Dados predefinidos para administradores
+        admins_data = [
+            {
+                'username': 'admin',
+                'email': 'admin@example.com',
+                'first_name': 'Admin',
+                'last_name': 'Principal',
+                'telefone': '(11) 99999-0001'
+            },
+            {
+                'username': 'admin2',
+                'email': 'admin2@example.com',
+                'first_name': 'Admin',
+                'last_name': 'Secundário',
+                'telefone': '(11) 99999-0002'
+            },
+            {
+                'username': 'admin3',
+                'email': 'admin3@example.com',
+                'first_name': 'Admin',
+                'last_name': 'Sistema',
+                'telefone': '(11) 99999-0003'
+            }
+        ]
+
+        # Perguntas e respostas padrão para administradores
+        perguntas_respostas = [
+            ('cidade_nascimento', 'São Paulo'),
+            ('nome_mae', 'Maria Admin'),
+            ('animal_estimacao', 'Admin Cat'),
+            ('escola', 'Escola Admin'),
+            ('comida_favorita', 'Café'),
+            ('time', 'Administração FC'),
+            ('livro_favorito', 'Manual do Admin'),
+            ('professor_favorito', 'Professor Admin'),
+        ]
+
+        administradores_criados = []
+        for i in range(min(quantidade, len(admins_data))):
+            admin_data = admins_data[i]
+            
+            # Escolhe duas perguntas diferentes aleatoriamente
+            perguntas_escolhidas = random.sample(perguntas_respostas, 2)
+
+            administrador, created = Usuario.objects.get_or_create(
+                username=admin_data['username'],
+                defaults={
+                    'email': admin_data['email'],
+                    'first_name': admin_data['first_name'],
+                    'last_name': admin_data['last_name'],
+                    'tipo_usuario': 'administrador',
+                    'telefone': admin_data['telefone'],
+                    'pergunta_seguranca_1': perguntas_escolhidas[0][0],
+                    'resposta_seguranca_1': perguntas_escolhidas[0][1],
+                    'pergunta_seguranca_2': perguntas_escolhidas[1][0],
+                    'resposta_seguranca_2': perguntas_escolhidas[1][1],
+                    'is_staff': True,
+                    'is_superuser': True,
+                }
+            )
+
+            if created:
+                administrador.set_password('admin123')
+                administrador.save()
+                self.stdout.write(
+                    f"   ✓ {administrador.get_full_name()} "
+                    f"(user: {admin_data['username']}, senha: admin123)"
+                )
+            else:
+                self.stdout.write(f"   → {admin_data['username']} (já existe)")
+            
+            administradores_criados.append(administrador)
+
+        return administradores_criados
+
     def criar_cursos(self):
         """Cria cursos de exemplo"""
-        self.stdout.write("\n📚 [1/5] Criando cursos...")
+        self.stdout.write("\n📚 [2/5] Criando cursos...")
 
         cursos_data = [
             {
@@ -127,7 +217,7 @@ class Command(BaseCommand):
 
     def criar_veiculos(self):
         """Cria veículos de exemplo"""
-        self.stdout.write("\n🚗 [2/5] Criando veículos...")
+        self.stdout.write("\n🚗 [3/5] Criando veículos...")
 
         veiculos_data = [
             {
@@ -186,7 +276,7 @@ class Command(BaseCommand):
     def criar_professores(self, quantidade=10):
         """Cria professores com dados realistas"""
         self.stdout.write(
-            f"\n👨‍🏫 [3/5] Criando {quantidade} professores..."
+            f"\n👨‍🏫 [4/5] Criando {quantidade} professores..."
         )
 
         # Perguntas e respostas padrão para todos
@@ -374,6 +464,10 @@ class Command(BaseCommand):
         self.stdout.write("=" * 60)
 
         self.stdout.write("\n📊 Resumo:")
+        self.stdout.write(
+            f"  • Administradores: "
+            f"{Usuario.objects.filter(tipo_usuario='administrador').count()}"
+        )
         self.stdout.write(f"  • Cursos: {Curso.objects.count()}")
         self.stdout.write(f"  • Veículos: {Veiculo.objects.count()}")
         self.stdout.write(
@@ -398,7 +492,14 @@ class Command(BaseCommand):
         self.stdout.write(f"  • Trajetos: {Trajeto.objects.count()}")
 
         self.stdout.write("\n👤 Credenciais de Teste:")
-        self.stdout.write("  ┌─ Professores:")
+        self.stdout.write("  ┌─ Administradores:")
+        admins = Usuario.objects.filter(tipo_usuario='administrador')[:3]
+        for admin in admins:
+            self.stdout.write(
+                f"  │  • Username: {admin.username}  Senha: admin123"
+            )
+        
+        self.stdout.write("  ├─ Professores:")
         for i in range(1, min(4, 11)):
             self.stdout.write(
                 f"  │  • Username: prof{i:02d}  Senha: senha123"
@@ -408,6 +509,8 @@ class Command(BaseCommand):
         ).count()
         if prof_count > 3:
             self.stdout.write(f"  └─ ... (total: {prof_count})")
+        else:
+            self.stdout.write("  └─ (fim)")
 
         self.stdout.write("\n💡 Próximos Passos:")
         self.stdout.write(
