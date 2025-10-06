@@ -18,4 +18,9 @@ urlpatterns = [
     # Relatórios
     path('relatorios/', views.relatorio_geral, name='relatorio_geral'),
     path('relatorios/curso/', views.relatorio_por_curso, name='relatorio_por_curso'),
+    
+    # Exportações
+    path('relatorios/exportar/excel/', views.exportar_relatorio_excel, name='exportar_excel'),
+    path('relatorios/exportar/pdf/', views.exportar_relatorio_pdf, name='exportar_pdf'),
+    path('relatorios/curso/exportar/excel/', views.exportar_curso_excel, name='exportar_curso_excel'),
 ]
