@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import Count, Sum, Q
 from django.http import JsonResponse, HttpResponse
@@ -33,25 +34,45 @@ def is_administrador(user):
 def lista_agendamentos(request):
     """Lista agendamentos do usuário (ou todos se admin)"""
     if request.user.is_administrador():
-        agendamentos = Agendamento.objects.all().select_related(
+        agendamentos_list = Agendamento.objects.all().select_related(
             'curso', 'professor', 'veiculo')
     else:
-        agendamentos = Agendamento.objects.filter(
+        agendamentos_list = Agendamento.objects.filter(
             professor=request.user).select_related('curso', 'veiculo')
 
     # Filtros
     status = request.GET.get('status')
     if status:
-        agendamentos = agendamentos.filter(status=status)
+        agendamentos_list = agendamentos_list.filter(status=status)
 
     curso_id = request.GET.get('curso')
     if curso_id:
-        agendamentos = agendamentos.filter(curso_id=curso_id)
+        agendamentos_list = agendamentos_list.filter(curso_id=curso_id)
+
+    # Ordenação
+    agendamentos_list = agendamentos_list.order_by('-data_inicio')
+
+    # Paginação
+    paginator = Paginator(agendamentos_list, 10)  # 10 agendamentos por página
+    page = request.GET.get('page')
+    
+    try:
+        agendamentos = paginator.page(page)
+    except PageNotAnInteger:
+        # Se a página não é um inteiro, mostra a primeira página
+        agendamentos = paginator.page(1)
+    except EmptyPage:
+        # Se a página está fora do range, mostra a última página
+        agendamentos = paginator.page(paginator.num_pages)
+
+    # Dados para filtros
+    cursos_disponiveis = Curso.objects.filter(ativo=True)
 
     return render(request, 'agendamentos/lista.html', {
         'agendamentos': agendamentos,
         'status_filter': status,
         'curso_filter': curso_id,
+        'cursos_disponiveis': cursos_disponiveis,
     })
 
 
@@ -233,9 +254,20 @@ def deletar_agendamento(request, pk):
 @user_passes_test(is_administrador)
 def aprovacao_agendamentos(request):
     """Lista agendamentos pendentes para aprovação"""
-    agendamentos_pendentes = Agendamento.objects.filter(
+    agendamentos_list = Agendamento.objects.filter(
         status='pendente'
     ).select_related('curso', 'professor', 'veiculo').order_by('data_inicio')
+
+    # Paginação
+    paginator = Paginator(agendamentos_list, 12)  # 12 agendamentos por página
+    page = request.GET.get('page')
+    
+    try:
+        agendamentos_pendentes = paginator.page(page)
+    except PageNotAnInteger:
+        agendamentos_pendentes = paginator.page(1)
+    except EmptyPage:
+        agendamentos_pendentes = paginator.page(paginator.num_pages)
 
     return render(request, 'agendamentos/aprovacao.html', {
         'agendamentos': agendamentos_pendentes
@@ -418,13 +450,25 @@ def relatorio_geral(request):
     # Nome do mês atual
     nome_mes = dict(meses_disponiveis)[mes]
     
+    # Paginação dos agendamentos
+    agendamentos_list = agendamentos.order_by('-data_inicio')
+    paginator = Paginator(agendamentos_list, 15)  # 15 agendamentos por página
+    page = request.GET.get('page')
+    
+    try:
+        agendamentos_paginados = paginator.page(page)
+    except PageNotAnInteger:
+        agendamentos_paginados = paginator.page(1)
+    except EmptyPage:
+        agendamentos_paginados = paginator.page(paginator.num_pages)
+    
     context = {
         'stats_status': stats_status,
         'cursos_km': cursos_km,
         'total_km': total_km,
         'veiculos_stats': veiculos_stats,
         'professores_stats': professores_stats,
-        'agendamentos': agendamentos.order_by('-data_inicio'),
+        'agendamentos': agendamentos_paginados,
         
         # Filtros atuais
         'ano_atual': ano,
