@@ -1,4 +1,20 @@
-# 🚗 Sistema de Agendamento de Veículos
+# 🚗 Sist## 📋 Sumário
+
+- [🚀 Início Rápido](#-início-rápido)
+- [🏗️ Arquitetura](#%EF%B8%8F-arquitetura)
+- [✨ Funcionalidades](#-funcionalidades)
+- [🛠️ Tecnologias](#%EF%B8%8F-tecnologias)
+- [📦 Instalação](#-instalação)
+- [🔧 Configuração](#-configuração)
+- [⚡ Scripts de Automação](#-scripts-de-automação)
+- [🏃‍♂️ Comandos Úteis](#%EF%B8%8F-comandos-úteis)
+- [📖 Uso do Sistema](#-uso-do-sistema)
+- [🔒 Sistema de Autenticação](#-sistema-de-autenticação)
+- [📁 Estrutura do Projeto](#-estrutura-do-projeto)
+- [🗄️ Modelos de Dados](#%EF%B8%8F-modelos-de-dados)
+- [👤 Autor](#-autor)
+- [🤝 Contribuição](#-contribuição)
+- [📜 Licença](#-licença)to de Veículos
 
 Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com **Django 5.2** e **Python 3.12**, com controle de quilometragem, trajetos e sistema de aprovação.
 
@@ -15,43 +31,54 @@ Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com 
 - [🛠️ Tecnologias](#%EF%B8%8F-tecnologias)
 - [📦 Instalação](#-instalação)
 - [🔧 Configuração](#-configuração)
-- [🏃‍♂️ Como Executar](#%EF%B8%8F-como-executar)
+- [🏃‍♂️ Comandos Úteis](#%EF%B8%8F-comandos-úteis)
 - [📖 Uso do Sistema](#-uso-do-sistema)
-- [🔒 Autenticação](#-autenticação)
+- [🔒 Sistema de Autenticação](#-sistema-de-autenticação)
 - [📁 Estrutura do Projeto](#-estrutura-do-projeto)
 - [🗄️ Modelos de Dados](#%EF%B8%8F-modelos-de-dados)
-- [👥 Colaboradores](#-colaboradores)
+- [� Autor](#-autor)
 - [🤝 Contribuição](#-contribuição)
 - [📜 Licença](#-licença)
 
 ## 🚀 Início Rápido
 
+### ⚡ Com Scripts de Automação (Recomendado)
+
 ```bash
-# Clone o repositório
+# Clone o projeto
 git clone https://github.com/HeitorLouzeiro/agendamento_veiculos.git
 cd agendamento_veiculos
 
-# Crie e ative o ambiente virtual (Windows)
+# Setup completo automatizado
+./setup.sh
+
+# Iniciar servidor
+./start.sh
+```
+
+### 🛠️ Manual (Tradicional)
+
+```bash
+# Clone e configure manualmente
+git clone https://github.com/HeitorLouzeiro/agendamento_veiculos.git
+cd agendamento_veiculos
 python -m venv venv
+
+# Windows
 venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
 
-# Instale as dependências
+# Instale dependências e configure
 pip install -r requirements.txt
-
-# Execute as migrações
 python manage.py migrate
-
-# Crie um superusuário
 python manage.py createsuperuser
-
-# (Opcional) Carregue dados de exemplo
-python load_sample_data.py
-
-# Inicie o servidor
 python manage.py runserver
 ```
 
-Acesse: **http://127.0.0.1:8000**
+✅ Acesse: **http://127.0.0.1:8000**
+
+> 💡 **Dica:** Use os scripts de automação para uma experiência mais rápida! Veja [SCRIPTS.md](SCRIPTS.md) para detalhes.
 
 ## 🏗️ Arquitetura
 
@@ -165,76 +192,33 @@ pip --version
 git --version
 ```
 
-### Instalação Completa
+### Instalação Detalhada
 
-#### 1. Clone o repositório
+#### Configuração do Ambiente Virtual
 
-```bash
-git clone https://github.com/HeitorLouzeiro/agendamento_veiculos.git
-cd agendamento_veiculos
-```
-
-#### 2. Crie e ative o ambiente virtual
-
-**Windows (CMD):**
+**Windows:**
 ```cmd
-python -m venv venv
+# CMD
 venv\Scripts\activate
-```
 
-**Windows (PowerShell):**
-```powershell
-python -m venv venv
+# PowerShell
 venv\Scripts\Activate.ps1
 ```
 
 **Linux/Mac:**
 ```bash
-python3 -m venv venv
 source venv/bin/activate
 ```
 
-#### 3. Instale as dependências
+#### Dados de Exemplo (Opcional)
 
-```bash
-pip install -r requirements.txt
-```
-
-#### 4. Execute as migrações do banco de dados
-
-```bash
-python manage.py migrate
-```
-
-#### 5. Crie um superusuário (administrador)
-
-```bash
-python manage.py createsuperuser
-```
-
-Siga as instruções para criar o primeiro administrador do sistema.
-
-#### 6. (Opcional) Carregue dados de exemplo
-
-```bash
-python load_sample_data.py
-```
-
-Este script criará automaticamente:
+Execute `python manage.py load_sample_data` para criar:
 - 🔐 **3 administradores** com credenciais de teste
-- 👨‍🏫 **10 professores** com perfis completos
+- 👨‍🏫 **10 professores** com perfis completos  
 - 📚 **5 cursos** diversos com limites de KM
 - 🚗 **8 veículos** com diferentes características
 - 📅 **30 agendamentos** com status variados
 - 🗺️ **Trajetos** associados aos agendamentos aprovados
-
-#### 7. Inicie o servidor de desenvolvimento
-
-```bash
-python manage.py runserver
-```
-
-✅ **Sistema pronto!** Acesse: http://127.0.0.1:8000
 
 ## 🔧 Configuração
 
@@ -263,7 +247,7 @@ LANGUAGE_CODE=pt-br
 #### Desenvolvimento
 ```python
 DEBUG = True
-ALLOWED_HOSTS = []
+./setup.shALLOWED_HOSTS = []
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -299,44 +283,63 @@ Para ambiente de produção, certifique-se de:
 | **ALLOWED_HOSTS** | [] | ['seu-dominio.com'] |
 | **STATIC_ROOT** | - | /var/www/static/ |
 
-## 🏃‍♂️ Como Executar
+## ⚡ Scripts de Automação
 
-### Desenvolvimento Local
+O projeto inclui scripts shell para automatizar tarefas comuns de desenvolvimento:
+
+### 🎯 Scripts Principais
 
 ```bash
-# Ativar ambiente virtual (Windows CMD)
-venv\Scripts\activate
+# Setup inicial completo (execute uma vez)
+./setup.sh
 
-# Executar servidor de desenvolvimento
-python manage.py runserver
+# Iniciar servidor com verificações completas
+./start.sh
 
-# Servidor em porta customizada
-python manage.py runserver 8080
+# Desenvolvimento rápido (minimalista)
+./dev.sh
 
-# Acessível na rede local
-python manage.py runserver 0.0.0.0:8000
+# Reset completo do banco de dados
+./reset.sh
 ```
 
-### Comandos Úteis
+### 📋 Funcionalidades dos Scripts
+
+| Script | Funcionalidade | Uso |
+|--------|---------------|-----|
+| **setup.sh** | Configuração inicial completa | Primeira vez ou nova máquina |
+| **start.sh** | Servidor com verificações | Desenvolvimento diário |
+| **dev.sh** | Servidor rápido | Quando precisa de velocidade |
+| **reset.sh** | Reset do banco | Quando quer começar do zero |
+
+### 🎨 Características
+
+- ✅ **Interface colorida** e informativa
+- ✅ **Verificações automáticas** de ambiente
+- ✅ **Detecção de porta** disponível (8000-8005)
+- ✅ **Criação automática** de venv se necessário
+- ✅ **Tratamento de erros** robusto
+- ✅ **Confirmações de segurança** para ações destrutivas
+
+> 📖 **Documentação completa:** Veja [SCRIPTS.md](SCRIPTS.md) para detalhes e exemplos.
+
+## 🏃‍♂️ Comandos Úteis
 
 ```bash
-# Criar migrações
-python manage.py makemigrations
+# Servidor de desenvolvimento
+python manage.py runserver                  # Porta padrão (8000)
+python manage.py runserver 8080            # Porta customizada
+python manage.py runserver 0.0.0.0:8000    # Acessível na rede
 
-# Aplicar migrações
-python manage.py migrate
+# Migrações
+python manage.py makemigrations             # Criar migrações
+python manage.py migrate                    # Aplicar migrações
 
-# Criar superusuário
-python manage.py createsuperuser
-
-# Coletar arquivos estáticos
-python manage.py collectstatic
-
-# Shell interativo Django
-python manage.py shell
-
-# Carregar dados de exemplo
-python load_sample_data.py
+# Administração
+python manage.py createsuperuser           # Criar administrador
+python manage.py collectstatic             # Arquivos estáticos
+python manage.py shell                     # Shell Django
+python manage.py load_sample_data          # Dados de exemplo
 ```
 
 ## 📖 Uso do Sistema
@@ -348,26 +351,15 @@ python load_sample_data.py
 - 📊 **Dashboard**: http://127.0.0.1:8000/dashboard/
 - ⚙️ **Admin Django**: http://127.0.0.1:8000/admin/
 
-### Credenciais Padrão
+### Credenciais de Teste
 
-Após executar `python load_sample_data.py`:
+Com dados de exemplo carregados:
 
-```
-👤 Administrador 1
-Username: admin
-Senha: admin123
-Email: admin@example.com
-
-👤 Administrador 2
-Username: admin2
-Senha: admin123
-Email: admin2@example.com
-
-👤 Professor
-Username: professor1
-Senha: prof123
-Email: professor1@example.com
-```
+| Tipo | Username | Senha | Email |
+|------|----------|-------|-------|
+| Admin | admin | admin123 | admin@example.com |
+| Admin | admin2 | admin123 | admin2@example.com |
+| Professor | professor1 | prof123 | professor1@example.com |
 
 ### Fluxo de Trabalho
 
@@ -401,31 +393,22 @@ Acesse `/admin/` para usar a interface administrativa completa do Django com rec
 - Edição em massa
 - Histórico de alterações
 
-## � Autenticação
-
-O sistema utiliza o sistema de autenticação nativo do Django com melhorias:
+## 🔒 Sistema de Autenticação
 
 ### Níveis de Acesso
 
 | Tipo | Permissões |
 |------|-----------|
-| **Administrador** | Acesso total ao sistema, incluindo gestão de usuários, aprovação de agendamentos e configurações |
-| **Professor** | Criar agendamentos, registrar trajetos e visualizar apenas seus próprios agendamentos |
+| **Administrador** | Acesso total: gestão de usuários, aprovação de agendamentos, configurações |
+| **Professor** | Criar agendamentos, registrar trajetos, visualizar próprios agendamentos |
 
-### Proteção de Rotas
-
-- **Públicas**: Login, recuperação de senha
-- **Protegidas (Login Required)**: Dashboard, agendamentos, perfil
-- **Admin Only**: Gestão de usuários, aprovação de agendamentos, CRUD de veículos e cursos
-
-### Sistema de Login
+### Características de Segurança
 
 - ✅ Autenticação por **e-mail** ou **username**
 - ✅ Backend customizado (`EmailOrUsernameBackend`)
-- ✅ Sessões seguras com Django
 - ✅ Recuperação de senha por **perguntas de segurança**
-- ✅ Proteção CSRF em formulários
-- ✅ Validação de senhas fortes
+- ✅ Proteção CSRF e validação de senhas fortes
+- ✅ Rotas protegidas por nível de acesso
 
 ## �📁 Estrutura do Projeto
 
@@ -600,25 +583,11 @@ class Trajeto(models.Model):
 **Propriedades:**
 - `km_percorridos` - Calcula a diferença entre KM final e inicial
 
-## 👥 Colaboradores
+## � Autor
 
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/HeitorLouzeiro">
-        <img src="https://github.com/HeitorLouzeiro.png" width="100px;" alt="Heitor Louzeiro"/>
-        <br />
-        <sub><b>Heitor Louzeiro</b></sub>
-      </a>
-      <br />
-      <sub>💻 Desenvolvedor</sub>
-      <br />
-      <a href="https://www.linkedin.com/in/heitor-louzeiro/">
-        <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/>
-      </a>
-    </td>
-  </tr>
-</table>
+**Heitor Louzeiro** - *Desenvolvedor Principal*
+- GitHub: [@HeitorLouzeiro](https://github.com/HeitorLouzeiro)
+- LinkedIn: [Heitor Louzeiro](https://www.linkedin.com/in/heitor-louzeiro/)
 
 ## 🤝 Contribuição
 
@@ -656,20 +625,9 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 ---
 
 <div align="center">
-<table>
-  <tr>
-    <td align="center">
-      <strong>Heitor Louzeiro</strong><br/>
-      <a href="https://github.com/HeitorLouzeiro">
-        <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
-      </a>
-      <a href="https://www.linkedin.com/in/heitor-louzeiro/">
-        <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/>
-      </a>
-    </td>
-  </tr>
-</table>
 
-🚗 **Sistema de Agendamento de Veículos - Controle Total dos seus Agendamentos** 🚗
+🚗 **Sistema de Agendamento de Veículos** 🚗
+
+*Desenvolvido com Django - Controle total dos seus agendamentos*
 
 </div>
