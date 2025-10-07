@@ -40,7 +40,10 @@ def registro(request):
         form = RegistroForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)  # Faz login automático após registro
+            # Define o backend antes do login para evitar erro de múltiplos backends
+            backend = 'usuarios.backends.EmailOrUsernameBackend'
+            user.backend = backend
+            login(request, user, backend=backend)
             messages.success(
                 request,
                 f'Bem-vindo, {user.get_full_name()}! '
@@ -258,7 +261,9 @@ def alterar_senha(request):
             request.user.save()
 
             # Faz login novamente para manter sessão ativa
-            login(request, request.user)
+            backend = 'usuarios.backends.EmailOrUsernameBackend'
+            request.user.backend = backend
+            login(request, request.user, backend=backend)
 
             messages.success(
                 request,
