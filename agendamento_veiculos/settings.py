@@ -30,7 +30,7 @@ except ImportError:
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv(
-    'SECRET_KEY', 
+    'SECRET_KEY',
     'django-insecure-%@rr-2m0w9ng*6b91rko)=7g27#c96wlo82(ziu((r_dz6kiwt'
 )
 
@@ -38,7 +38,7 @@ SECRET_KEY = os.getenv(
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes', 'on')
 
 ALLOWED_HOSTS = [
-    host.strip() 
+    host.strip()
     for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
     if host.strip()
 ]
@@ -154,6 +154,6 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Login URLs
-LOGIN_URL = 'login'
+LOGIN_URL = 'usuarios:login'
 LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
+LOGOUT_REDIRECT_URL = 'usuarios:login'
