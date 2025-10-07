@@ -116,6 +116,24 @@
         </div>
     </div>
 </div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <!-- Toast para ver detalhes -->
+    <div id="loginToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-primary text-white">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto">Login Necessário</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <div class="d-flex flex-column">
+                <p class="mb-3">Para ver os detalhes do agendamento, você precisa fazer login.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -149,9 +167,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.location.href = info.event.url;
                 }
             {% else %}
-                // Usuário não logado - mostra mensagem e redireciona para login
-                alert('Para ver os detalhes do agendamento, você precisa fazer login.');
-                window.location.href = '{% url "usuarios:login" %}';
+                // Usuário não logado - mostra toast informativo
+                info.jsEvent.preventDefault();
+                var toastElement = document.getElementById('loginToast');
+                var toast = new bootstrap.Toast(toastElement);
+                toast.show();
             {% endif %}
         },
         eventTimeFormat: {
@@ -171,9 +191,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 var dataFim = info.dateStr + 'T17:00';
                 window.location.href = '{% url "agendamentos:criar" %}?data_inicio=' + dataInicio + '&data_fim=' + dataFim;
             {% else %}
-                // Usuário não logado - redireciona para login
-                alert('Para criar um agendamento, você precisa fazer login.');
-                window.location.href = '{% url "usuarios:login" %}';
+                // Usuário não logado - mostra toast para criar agendamento
+                var toastElement = document.getElementById('createToast');
+                var toast = new bootstrap.Toast(toastElement);
+                toast.show();
             {% endif %}
         }
     });
