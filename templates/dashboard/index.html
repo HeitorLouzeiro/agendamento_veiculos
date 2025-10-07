@@ -73,9 +73,11 @@
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2><i class="bi bi-calendar3"></i> Calendário de Agendamentos</h2>
-                <a href="{% url 'agendamentos:criar' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Novo Agendamento
-                </a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'agendamentos:criar' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Novo Agendamento
+                    </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -142,9 +144,15 @@ document.addEventListener('DOMContentLoaded', function() {
         events: '{% url "agendamentos:json" %}',
         eventClick: function(info) {
             info.jsEvent.preventDefault();
-            if (info.event.url) {
-                window.location.href = info.event.url;
-            }
+            {% if user.is_authenticated %}
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                }
+            {% else %}
+                // Usuário não logado - mostra mensagem e redireciona para login
+                alert('Para ver os detalhes do agendamento, você precisa fazer login.');
+                window.location.href = '{% url "usuarios:login" %}';
+            {% endif %}
         },
         eventTimeFormat: {
             hour: '2-digit',
@@ -157,10 +165,16 @@ document.addEventListener('DOMContentLoaded', function() {
             hour12: false
         },
         dateClick: function(info) {
-            // Redireciona para criar agendamento com data pré-selecionada
-            var dataInicio = info.dateStr + 'T08:00';
-            var dataFim = info.dateStr + 'T17:00';
-            window.location.href = '{% url "agendamentos:criar" %}?data_inicio=' + dataInicio + '&data_fim=' + dataFim;
+            {% if user.is_authenticated %}
+                // Usuário logado - redireciona para criar agendamento
+                var dataInicio = info.dateStr + 'T08:00';
+                var dataFim = info.dateStr + 'T17:00';
+                window.location.href = '{% url "agendamentos:criar" %}?data_inicio=' + dataInicio + '&data_fim=' + dataFim;
+            {% else %}
+                // Usuário não logado - redireciona para login
+                alert('Para criar um agendamento, você precisa fazer login.');
+                window.location.href = '{% url "usuarios:login" %}';
+            {% endif %}
         }
     });
     
