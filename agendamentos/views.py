@@ -124,7 +124,8 @@ def criar_agendamento(request):
                             'Agendamento criado com sucesso! '
                             'Aguarde a aprovação do administrador.'
                         )
-                        return redirect('agendamentos:lista')
+                        return redirect(
+                            'agendamentos:detalhe', pk=agendamento.pk)
                 except ValidationError as e:
                     # Extrai a mensagem de erro corretamente
                     if hasattr(e, 'message'):
@@ -185,7 +186,7 @@ def editar_agendamento(request, pk):
 
                     messages.success(
                         request, 'Agendamento atualizado com sucesso!')
-                    return redirect('agendamentos:lista')
+                    return redirect('agendamentos:detalhe', pk=agendamento.pk)
             except ValidationError as e:
                 # Extrai a mensagem de erro corretamente
                 if hasattr(e, 'message'):
@@ -203,7 +204,8 @@ def editar_agendamento(request, pk):
         'form': form,
         'formset': formset,
         'titulo': 'Editar Agendamento',
-        'agendamento': agendamento
+        'agendamento': agendamento,
+        'is_edit': True
     })
 
 

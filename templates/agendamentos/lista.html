@@ -68,7 +68,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h5 class="card-title mb-0">{{ agendamento.curso.nome }}</h5>
+                        <h5 class="card-title mb-0">Curso: {{ agendamento.curso.nome }}</h5>
                         <span class="badge status-badge status-{{ agendamento.status }}">
                             {{ agendamento.get_status_display }}
                         </span>
@@ -76,13 +76,55 @@
                     
                     <p class="card-text">
                         {% if user.is_administrador %}
-                            <i class="bi bi-person"></i> <strong>{{ agendamento.professor.get_full_name|default:agendamento.professor.username }}</strong><br>
+                            Professor: <i class="bi bi-person"></i> <strong>{{ agendamento.professor.get_full_name|default:agendamento.professor.username }}</strong><br>
                         {% endif %}
                         <i class="bi bi-car-front"></i> <strong>{{ agendamento.veiculo.placa }}</strong><br>
                         <i class="bi bi-calendar-event"></i> {{ agendamento.data_inicio|date:"d/m/Y H:i" }}<br>
                         <i class="bi bi-calendar-check"></i> {{ agendamento.data_fim|date:"d/m/Y H:i" }}<br>
                         <i class="bi bi-speedometer2"></i> {{ agendamento.get_total_km }} km
                     </p>
+                    
+                    <!-- Trajetos -->
+                    {% if agendamento.trajetos.all %}
+                    <div class="mb-2">
+                        <small class="text-muted"><strong><i class="bi bi-geo-alt"></i> Trajetos ({{ agendamento.trajetos.count }}):</strong></small>
+                        
+                        <!-- Mostra primeiros 3 trajetos -->
+                        {% for trajeto in agendamento.trajetos.all|slice:":3" %}
+                        <div class="small text-muted ms-3">
+                            <i class="bi bi-arrow-right"></i> {{ trajeto.origem }} → {{ trajeto.destino }} 
+                            <span class="badge bg-light text-dark">{{ trajeto.quilometragem }} km</span>
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Se houver mais de 3 trajetos, mostra botão para expandir -->
+                        {% if agendamento.trajetos.count > 3 %}
+                        <div class="collapse" id="trajetos-{{ agendamento.id }}">
+                            {% for trajeto in agendamento.trajetos.all|slice:"3:" %}
+                            <div class="small text-muted ms-3">
+                                <i class="bi bi-arrow-right"></i> {{ trajeto.origem }} → {{ trajeto.destino }} 
+                                <span class="badge bg-light text-dark">{{ trajeto.quilometragem }} km</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="ms-3 mt-1">
+                            <button class="btn btn-link btn-sm p-0 small text-primary" 
+                                    type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#trajetos-{{ agendamento.id }}" 
+                                    aria-expanded="false">
+                                <span class="show-more">
+                                    <i class="bi bi-chevron-down"></i> Ver mais {{ agendamento.trajetos.count|add:"-3" }} trajeto{{ agendamento.trajetos.count|add:"-3"|pluralize }}
+                                </span>
+                                <span class="show-less" style="display: none;">
+                                    <i class="bi bi-chevron-up"></i> Ver menos
+                                </span>
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     
                     {% if not user.is_administrador %}
                     <p class="card-text">
@@ -183,4 +225,36 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Controla os botões "Ver mais" / "Ver menos" dos trajetos
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(button) {
+        const target = button.getAttribute('data-bs-target');
+        const collapseElement = document.querySelector(target);
+        
+        if (collapseElement) {
+            collapseElement.addEventListener('show.bs.collapse', function() {
+                const showMore = button.querySelector('.show-more');
+                const showLess = button.querySelector('.show-less');
+                if (showMore && showLess) {
+                    showMore.style.display = 'none';
+                    showLess.style.display = 'inline';
+                }
+            });
+            
+            collapseElement.addEventListener('hide.bs.collapse', function() {
+                const showMore = button.querySelector('.show-more');
+                const showLess = button.querySelector('.show-less');
+                if (showMore && showLess) {
+                    showMore.style.display = 'inline';
+                    showLess.style.display = 'none';
+                }
+            });
+        }
+    });
+});
+</script>
 {% endblock %}

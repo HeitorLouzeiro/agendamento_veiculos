@@ -126,6 +126,12 @@
                            class="btn btn-danger w-100 mb-2">
                             <i class="bi bi-x-circle"></i> Reprovar
                         </a>
+
+                        <!-- Ação de Editar (sempre disponível para admin) -->
+                        <a href="{% url 'agendamentos:editar' agendamento.pk %}" 
+                           class="btn btn-warning w-100 mb-2">
+                            <i class="bi bi-pencil"></i> Editar
+                        </a>
                         {% elif agendamento.status == 'aprovado' %}
                         <a href="{% url 'agendamentos:reprovar' agendamento.pk %}" 
                            class="btn btn-warning w-100 mb-2">
