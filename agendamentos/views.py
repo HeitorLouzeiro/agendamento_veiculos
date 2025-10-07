@@ -323,10 +323,9 @@ def reprovar_agendamento(request, pk):
     return render(request, 'agendamentos/reprovar.html', {'agendamento': agendamento})
 
 
-@login_required
 def agendamentos_json(request):
-    """Retorna agendamentos em formato JSON para o calendário"""
-    # Administradores e professores veem todos os agendamentos
+    """Retorna agendamentos em formato JSON para o calendário (público)"""
+    # Todos podem ver os agendamentos no calendário
     agendamentos = Agendamento.objects.all().select_related(
         'professor', 'curso', 'veiculo'
     )
@@ -341,32 +340,48 @@ def agendamentos_json(request):
         else:  # reprovado
             color = '#dc3545'  # Vermelho
 
-        # Indica se é do usuário atual para controle de edição
-        is_owner = agendamento.professor == request.user
-        can_edit = request.user.is_administrador() or is_owner
+        # Verifica se o usuário está autenticado
+        if request.user.is_authenticated:
+            # Usuário logado - mostra informações completas
+            is_owner = agendamento.professor == request.user
+            can_edit = request.user.is_administrador() or is_owner
 
-        # Adiciona nome do professor ao título para distinguir agendamentos
-        title = f"{agendamento.curso.nome} - {agendamento.veiculo.placa}"
-        if not is_owner and not request.user.is_administrador():
-            professor_name = (agendamento.professor.get_full_name() or
-                              agendamento.professor.username)
-            title += f" ({professor_name})"
+            title = f"{agendamento.curso.nome} - {agendamento.veiculo.placa}"
+            if not is_owner and not request.user.is_administrador():
+                professor_name = (agendamento.professor.get_full_name() or
+                                  agendamento.professor.username)
+                title += f" ({professor_name})"
 
-        eventos.append({
-            'id': agendamento.id,
-            'title': title,
-            'start': agendamento.data_inicio.isoformat(),
-            'end': agendamento.data_fim.isoformat(),
-            'color': color,
-            'url': f'/agendamentos/{agendamento.id}/',
-            'extendedProps': {
+            url = f'/agendamentos/{agendamento.id}/'
+            extended_props = {
                 'is_owner': is_owner,
                 'can_edit': can_edit,
                 'professor_name': (agendamento.professor.get_full_name() or
                                    agendamento.professor.username),
                 'status': agendamento.status
             }
-        })
+        else:
+            # Usuário não logado - mostra apenas informações básicas
+            title = f"{agendamento.curso.nome} - Agendado"
+            url = None  # Sem link para detalhes
+            extended_props = {
+                'requires_login': True
+            }
+
+        evento = {
+            'id': agendamento.id,
+            'title': title,
+            'start': agendamento.data_inicio.isoformat(),
+            'end': agendamento.data_fim.isoformat(),
+            'color': color,
+            'extendedProps': extended_props
+        }
+
+        # Adiciona URL apenas se usuário estiver logado
+        if url:
+            evento['url'] = url
+
+        eventos.append(evento)
 
     return JsonResponse(eventos, safe=False)
 
