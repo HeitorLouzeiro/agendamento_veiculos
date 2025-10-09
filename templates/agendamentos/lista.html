@@ -37,7 +37,7 @@
                         <option value="reprovado" {% if status_filter == 'reprovado' %}selected{% endif %}>Reprovado</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label">Curso</label>
                     <select name="curso" class="form-select">
                         <option value="">Todos os Cursos</option>
@@ -46,6 +46,14 @@
                         {% endfor %}
                     </select>
                 </div>
+                {% if user.is_administrador %}
+                <div class="col-md-3">
+                    <label class="form-label">Professor</label>
+                    <input type="text" name="professor" class="form-control" 
+                           placeholder="Nome, email ou usuário..." 
+                           value="{{ professor_filter|default:'' }}">
+                </div>
+                {% endif %}
                 <div class="col-md-3">
                     <label class="form-label">&nbsp;</label>
                     <div>
@@ -81,6 +89,7 @@
                         <i class="bi bi-car-front"></i> <strong>{{ agendamento.veiculo.placa }}</strong><br>
                         <i class="bi bi-calendar-event"></i> {{ agendamento.data_inicio|date:"d/m/Y H:i" }}<br>
                         <i class="bi bi-calendar-check"></i> {{ agendamento.data_fim|date:"d/m/Y H:i" }}<br>
+                        <i class="bi bi-clock-history text-muted"></i> <small class="text-muted">Criado em {{ agendamento.criado_em|date:"d/m/Y H:i" }}</small><br>
                         <i class="bi bi-speedometer2"></i> {{ agendamento.get_total_km }} km
                     </p>
                     

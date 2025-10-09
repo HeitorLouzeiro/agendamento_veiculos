@@ -6,6 +6,42 @@
 <div class="container mt-4">
     <h2 class="mb-4"><i class="bi bi-check-circle"></i> Aprovar Agendamentos</h2>
 
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="curso" class="form-label">Filtrar por Curso</label>
+                    <select name="curso" id="curso" class="form-select">
+                        <option value="">Todos os Cursos</option>
+                        {% for curso in cursos_disponiveis %}
+                        <option value="{{ curso.id }}" {% if curso_filter == curso.id|stringformat:"s" %}selected{% endif %}>
+                            {{ curso.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="professor" class="form-label">Buscar Professor</label>
+                    <input type="text" 
+                           name="professor" 
+                           id="professor" 
+                           class="form-control" 
+                           placeholder="Nome, email ou usuário..."
+                           value="{{ professor_filter|default:'' }}">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                    <a href="{% url 'agendamentos:aprovacao' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
     {% if agendamentos.object_list %}
     <div class="row">
         {% for agendamento in agendamentos %}
@@ -16,7 +52,7 @@
                 </div>
                 <div class="card-body">
                     <p class="card-text">
-                        <strong><i class="bi bi-person"></i> Professor:</strong><br>
+                        <strong><i class="bi bi-person"></i> Professor:</strong>
                         {{ agendamento.professor.get_full_name }}<br><br>
                         
                         <strong><i class="bi bi-car-front"></i> Veículo:</strong><br>
@@ -25,6 +61,9 @@
                         <strong><i class="bi bi-calendar-event"></i> Período:</strong><br>
                         {{ agendamento.data_inicio|date:"d/m/Y H:i" }}<br>
                         até {{ agendamento.data_fim|date:"d/m/Y H:i" }}<br><br>
+                        
+                        <strong><i class="bi bi-clock-history"></i> Criado em:</strong><br>
+                        <small class="text-muted">{{ agendamento.criado_em|date:"d/m/Y H:i" }}</small><br><br>
                         
                         <strong><i class="bi bi-speedometer2"></i> Total KM:</strong><br>
                         {{ agendamento.get_total_km }} km
@@ -35,6 +74,50 @@
                         <small><strong>Obs:</strong> {{ agendamento.observacoes|truncatewords:20 }}</small>
                     </div>
                     {% endif %}
+                    
+                    <!-- Trajetos -->
+                    {% with trajetos=agendamento.trajetos.all %}
+                    {% if trajetos %}
+                    <div class="mt-3">
+                        <strong><i class="bi bi-geo-alt"></i> 
+                        {% if trajetos.count == 1 %}
+                            Trajeto ({{ trajetos.count }}):
+                        {% else %}
+                            Trajetos ({{ trajetos.count }}):
+                        {% endif %}
+                        </strong>
+                        <div class="ms-3 mt-2">
+                            {% for trajeto in trajetos|slice:":3" %}
+                            <div class="text-muted small">
+                                <i class="bi bi-arrow-right text-primary"></i> 
+                                {{ trajeto.origem }} → {{ trajeto.destino }} 
+                                <span class="badge bg-secondary">{{ trajeto.quilometragem }} km</span>
+                            </div>
+                            {% endfor %}
+                            
+                            {% if trajetos.count > 3 %}
+                            <div class="collapse" id="trajetos-{{ agendamento.id }}">
+                                {% for trajeto in trajetos|slice:"3:" %}
+                                <div class="text-muted small">
+                                    <i class="bi bi-arrow-right text-primary"></i> 
+                                    {{ trajeto.origem }} → {{ trajeto.destino }} 
+                                    <span class="badge bg-secondary">{{ trajeto.quilometragem }} km</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button class="btn btn-link btn-sm p-0 mt-1 text-decoration-none" 
+                                    type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#trajetos-{{ agendamento.id }}" 
+                                    aria-expanded="false">
+                                <i class="bi bi-chevron-down"></i> Ver mais {{ trajetos.count|add:"-3" }} 
+                                {% if trajetos.count|add:"-3" == 1 %}trajeto{% else %}trajetos{% endif %}
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
                 </div>
                 <div class="card-footer bg-transparent">
                     <div class="d-flex justify-content-between mb-2">
@@ -242,4 +325,58 @@
 {% endif %}
 
 </div>
+
+<script>
+// Manter filtros na paginação
+document.addEventListener('DOMContentLoaded', function() {
+    // Obter parâmetros atuais da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const curso = urlParams.get('curso');
+    const professor = urlParams.get('professor');
+    
+    // Atualizar todos os links de paginação
+    document.querySelectorAll('.pagination a').forEach(function(link) {
+        const href = new URL(link.href, window.location.origin);
+        
+        // Adicionar filtros aos links se existirem
+        if (curso) {
+            href.searchParams.set('curso', curso);
+        }
+        if (professor) {
+            href.searchParams.set('professor', professor);
+        }
+        
+        link.href = href.toString();
+    });
+    
+    // Controlar texto dos botões de trajetos
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(button) {
+        const targetId = button.getAttribute('data-bs-target');
+        const target = document.querySelector(targetId);
+        
+        if (target && targetId.includes('trajetos-')) {
+            target.addEventListener('show.bs.collapse', function() {
+                const icon = button.querySelector('i');
+                const text = button.childNodes[2]; // Texto após o ícone
+                icon.className = 'bi bi-chevron-up';
+                if (text) {
+                    text.textContent = ' Ver menos';
+                }
+            });
+            
+            target.addEventListener('hide.bs.collapse', function() {
+                const icon = button.querySelector('i');
+                const text = button.childNodes[2]; // Texto após o ícone
+                icon.className = 'bi bi-chevron-down';
+                if (text) {
+                    // Recuperar o número de trajetos ocultos
+                    const hiddenItems = target.children.length;
+                    const plural = hiddenItems === 1 ? 'trajeto' : 'trajetos';
+                    text.textContent = ` Ver mais ${hiddenItems} ${plural}`;
+                }
+            });
+        }
+    });
+});
+</script>
 {% endblock %}
