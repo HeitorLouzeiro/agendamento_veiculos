@@ -1,22 +1,37 @@
+"""
+Views para gerenciamento de cursos.
+
+Este módulo contém views para CRUD de cursos,
+acessível apenas por administradores.
+"""
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import get_object_or_404, redirect, render
+
+from common.constants import CURSOS_POR_PAGINA
+from common.decorators import is_administrador
+from common.pagination import PaginationHelper
 
 from .forms import CursoForm
 from .models import Curso
 
 
-def is_administrador(user):
-    """Verifica se o usuário é administrador"""
-    return user.is_administrador()
-
-
 @login_required
 @user_passes_test(is_administrador)
 def lista_cursos(request):
-    """Lista todos os cursos"""
-    cursos = Curso.objects.all()
-    return render(request, 'cursos/lista.html', {'cursos': cursos})
+    """Lista todos os cursos com paginação"""
+    cursos = Curso.objects.all().order_by('nome')
+
+    # Aplicar paginação
+    pagination = PaginationHelper(cursos, CURSOS_POR_PAGINA)
+    cursos_paginados = pagination.get_page(request.GET.get('page'))
+
+    return render(
+        request,
+        'cursos/lista.html',
+        {'cursos': cursos_paginados}
+    )
 
 
 @login_required
@@ -32,7 +47,8 @@ def criar_curso(request):
     else:
         form = CursoForm()
 
-    return render(request, 'cursos/form.html', {'form': form, 'titulo': 'Novo Curso'})
+    context = {'form': form, 'titulo': 'Novo Curso'}
+    return render(request, 'cursos/form.html', context)
 
 
 @login_required
@@ -50,7 +66,8 @@ def editar_curso(request, pk):
     else:
         form = CursoForm(instance=curso)
 
-    return render(request, 'cursos/form.html', {'form': form, 'titulo': 'Editar Curso', 'curso': curso})
+    context = {'form': form, 'titulo': 'Editar Curso', 'curso': curso}
+    return render(request, 'cursos/form.html', context)
 
 
 @login_required
