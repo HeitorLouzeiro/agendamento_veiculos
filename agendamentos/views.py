@@ -27,6 +27,13 @@ from veiculos.models import Veiculo
 from .forms import AgendamentoForm, TrajetoFormSet, TrajetoFormSetEdit
 from .models import Agendamento, Trajeto
 
+# Configurações de paginação
+AGENDAMENTOS_POR_PAGINA = 10
+AGENDAMENTOS_RELATORIO_POR_PAGINA = 15
+AGENDAMENTOS_APROVACAO_POR_PAGINA = 10
+VEICULOS_POR_PAGINA = 5
+PROFESSORES_POR_PAGINA = 5
+
 
 def is_administrador(user):
     """Verifica se o usuário é administrador"""
@@ -52,11 +59,21 @@ def lista_agendamentos(request):
     if curso_id:
         agendamentos_list = agendamentos_list.filter(curso_id=curso_id)
 
+    # Filtro por professor (busca por nome, email ou username)
+    professor_search = request.GET.get('professor')
+    if professor_search:
+        agendamentos_list = agendamentos_list.filter(
+            Q(professor__first_name__icontains=professor_search) |
+            Q(professor__last_name__icontains=professor_search) |
+            Q(professor__email__icontains=professor_search) |
+            Q(professor__username__icontains=professor_search)
+        )
+
     # Ordenação
-    agendamentos_list = agendamentos_list.order_by('-data_inicio')
+    agendamentos_list = agendamentos_list.order_by('-criado_em')
 
     # Paginação
-    paginator = Paginator(agendamentos_list, 10)  # 10 agendamentos por página
+    paginator = Paginator(agendamentos_list, AGENDAMENTOS_POR_PAGINA)
     page = request.GET.get('page')
 
     try:
@@ -75,6 +92,7 @@ def lista_agendamentos(request):
         'agendamentos': agendamentos,
         'status_filter': status,
         'curso_filter': curso_id,
+        'professor_filter': professor_search,
         'cursos_disponiveis': cursos_disponiveis,
     })
 
@@ -261,10 +279,28 @@ def aprovacao_agendamentos(request):
     """Lista agendamentos pendentes para aprovação"""
     agendamentos_list = Agendamento.objects.filter(
         status='pendente'
-    ).select_related('curso', 'professor', 'veiculo').order_by('data_inicio')
+    ).select_related('curso', 'professor', 'veiculo')
+
+    # Filtros
+    curso_id = request.GET.get('curso')
+    if curso_id:
+        agendamentos_list = agendamentos_list.filter(curso_id=curso_id)
+
+    # Filtro por professor (busca por nome, email ou username)
+    professor_search = request.GET.get('professor')
+    if professor_search:
+        agendamentos_list = agendamentos_list.filter(
+            Q(professor__first_name__icontains=professor_search) |
+            Q(professor__last_name__icontains=professor_search) |
+            Q(professor__email__icontains=professor_search) |
+            Q(professor__username__icontains=professor_search)
+        )
+
+    # Ordenação
+    agendamentos_list = agendamentos_list.order_by('-criado_em')
 
     # Paginação
-    paginator = Paginator(agendamentos_list, 12)  # 12 agendamentos por página
+    paginator = Paginator(agendamentos_list, AGENDAMENTOS_APROVACAO_POR_PAGINA)
     page = request.GET.get('page')
 
     try:
@@ -274,8 +310,14 @@ def aprovacao_agendamentos(request):
     except EmptyPage:
         agendamentos_pendentes = paginator.page(paginator.num_pages)
 
+    # Dados para filtros
+    cursos_disponiveis = Curso.objects.filter(ativo=True)
+
     return render(request, 'agendamentos/aprovacao.html', {
-        'agendamentos': agendamentos_pendentes
+        'agendamentos': agendamentos_pendentes,
+        'curso_filter': curso_id,
+        'professor_filter': professor_search,
+        'cursos_disponiveis': cursos_disponiveis,
     })
 
 
@@ -464,19 +506,42 @@ def relatorio_geral(request):
             dados['km_total'] / dados['limite_mensal']) * 100
         dados['km_disponivel'] = dados['limite_mensal'] - dados['km_total']
 
-    # Agendamentos por veículo
-    veiculos_stats = agendamentos.values(
+    # Agendamentos por veículo (com paginação)
+    veiculos_stats_list = agendamentos.values(
         'veiculo__placa', 'veiculo__marca', 'veiculo__modelo'
     ).annotate(
         total_agendamentos=Count('id')
     ).order_by('-total_agendamentos')
 
-    # Agendamentos por professor
-    professores_stats = agendamentos.values(
+    veiculos_paginator = Paginator(
+        veiculos_stats_list, VEICULOS_POR_PAGINA)
+    page_veiculos = request.GET.get('page_veiculos')
+
+    try:
+        veiculos_stats = veiculos_paginator.page(page_veiculos)
+    except PageNotAnInteger:
+        veiculos_stats = veiculos_paginator.page(1)
+    except EmptyPage:
+        veiculos_stats = veiculos_paginator.page(veiculos_paginator.num_pages)
+
+    # Agendamentos por professor (com paginação)
+    professores_stats_list = agendamentos.values(
         'professor__first_name', 'professor__last_name'
     ).annotate(
         total_agendamentos=Count('id')
     ).order_by('-total_agendamentos')
+
+    professores_paginator = Paginator(
+        professores_stats_list, PROFESSORES_POR_PAGINA)
+    page_professores = request.GET.get('page_professores')
+
+    try:
+        professores_stats = professores_paginator.page(page_professores)
+    except PageNotAnInteger:
+        professores_stats = professores_paginator.page(1)
+    except EmptyPage:
+        professores_stats = professores_paginator.page(
+            professores_paginator.num_pages)
 
     # Dados para os filtros
     anos_disponiveis = list(range(2023, hoje.year + 2))
@@ -491,8 +556,9 @@ def relatorio_geral(request):
     nome_mes = dict(meses_disponiveis)[mes]
 
     # Paginação dos agendamentos
-    agendamentos_list = agendamentos.order_by('-data_inicio')
-    paginator = Paginator(agendamentos_list, 15)  # 15 agendamentos por página
+    agendamentos_list = agendamentos.order_by('-criado_em')
+    total_agendamentos_periodo = agendamentos_list.count()  # Total antes da paginação
+    paginator = Paginator(agendamentos_list, AGENDAMENTOS_RELATORIO_POR_PAGINA)
     page = request.GET.get('page')
 
     try:
@@ -509,6 +575,7 @@ def relatorio_geral(request):
         'veiculos_stats': veiculos_stats,
         'professores_stats': professores_stats,
         'agendamentos': agendamentos_paginados,
+        'total_agendamentos_periodo': total_agendamentos_periodo,
 
         # Filtros atuais
         'ano_atual': ano,
@@ -1020,9 +1087,6 @@ def exportar_curso_excel(request):
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
-    return response
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     return response
