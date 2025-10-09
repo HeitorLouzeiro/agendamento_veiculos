@@ -14,13 +14,23 @@ urlpatterns = [
     path('<uuid:pk>/aprovar/', views.aprovar_agendamento, name='aprovar'),
     path('<uuid:pk>/reprovar/', views.reprovar_agendamento, name='reprovar'),
     path('json/', views.agendamentos_json, name='json'),
-    
+
     # Relatórios
     path('relatorios/', views.relatorio_geral, name='relatorio_geral'),
-    path('relatorios/curso/', views.relatorio_por_curso, name='relatorio_por_curso'),
-    
+    path('relatorios/curso/', views.relatorio_por_curso,
+         name='relatorio_por_curso'),
+    path('relatorios/professor/', views.relatorio_por_professor,
+         name='relatorio_por_professor'),
+
     # Exportações
-    path('relatorios/exportar/excel/', views.exportar_relatorio_excel, name='exportar_excel'),
-    path('relatorios/exportar/pdf/', views.exportar_relatorio_pdf, name='exportar_pdf'),
-    path('relatorios/curso/exportar/excel/', views.exportar_curso_excel, name='exportar_curso_excel'),
+    path('relatorios/exportar/excel/',
+         views.exportar_relatorio_excel, name='exportar_excel'),
+    path('relatorios/exportar/pdf/',
+         views.exportar_relatorio_pdf, name='exportar_pdf'),
+    path('relatorios/curso/exportar/excel/',
+         views.exportar_curso_excel, name='exportar_curso_excel'),
+    path('relatorios/professor/exportar/excel/',
+         views.exportar_professor_excel, name='exportar_professor_excel'),
+    path('relatorios/professor/exportar/pdf/',
+         views.exportar_professor_pdf, name='exportar_professor_pdf'),
 ]

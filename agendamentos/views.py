@@ -1,28 +1,39 @@
+import calendar
+import io
+from datetime import datetime, timedelta
+
+import xlsxwriter
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db import transaction
-from django.db.models import Count, Sum, Q
-from django.http import JsonResponse, HttpResponse
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db import models, transaction
+from django.db.models import Count, Q, Sum
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from datetime import datetime, timedelta
-import calendar
-import io
-import xlsxwriter
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.styles import Alignment, Font, PatternFill
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
+from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
+                                TableStyle)
+
+from cursos.models import Curso
+from veiculos.models import Veiculo
 
 from .forms import AgendamentoForm, TrajetoFormSet, TrajetoFormSetEdit
 from .models import Agendamento, Trajeto
-from cursos.models import Curso
-from veiculos.models import Veiculo
+
+# Configurações de paginação
+AGENDAMENTOS_POR_PAGINA = 10
+AGENDAMENTOS_RELATORIO_POR_PAGINA = 15
+AGENDAMENTOS_APROVACAO_POR_PAGINA = 10
+VEICULOS_POR_PAGINA = 5
+PROFESSORES_POR_PAGINA = 5
+PROFESSORES_RELATORIO_POR_PAGINA = 10
 
 
 def is_administrador(user):
@@ -49,13 +60,23 @@ def lista_agendamentos(request):
     if curso_id:
         agendamentos_list = agendamentos_list.filter(curso_id=curso_id)
 
+    # Filtro por professor (busca por nome, email ou username)
+    professor_search = request.GET.get('professor')
+    if professor_search:
+        agendamentos_list = agendamentos_list.filter(
+            Q(professor__first_name__icontains=professor_search) |
+            Q(professor__last_name__icontains=professor_search) |
+            Q(professor__email__icontains=professor_search) |
+            Q(professor__username__icontains=professor_search)
+        )
+
     # Ordenação
-    agendamentos_list = agendamentos_list.order_by('-data_inicio')
+    agendamentos_list = agendamentos_list.order_by('-criado_em')
 
     # Paginação
-    paginator = Paginator(agendamentos_list, 10)  # 10 agendamentos por página
+    paginator = Paginator(agendamentos_list, AGENDAMENTOS_POR_PAGINA)
     page = request.GET.get('page')
-    
+
     try:
         agendamentos = paginator.page(page)
     except PageNotAnInteger:
@@ -72,6 +93,7 @@ def lista_agendamentos(request):
         'agendamentos': agendamentos,
         'status_filter': status,
         'curso_filter': curso_id,
+        'professor_filter': professor_search,
         'cursos_disponiveis': cursos_disponiveis,
     })
 
@@ -101,11 +123,11 @@ def criar_agendamento(request):
                     for f in formset if f.cleaned_data and
                     not f.cleaned_data.get('DELETE', False)
                 )
-                
+
                 # Valida o limite de KM manualmente
                 try:
                     form.validar_limite_km_manual(total_km_trajetos)
-                    
+
                     with transaction.atomic():
                         agendamento = form.save(commit=False)
                         agendamento.professor = request.user
@@ -121,7 +143,8 @@ def criar_agendamento(request):
                             'Agendamento criado com sucesso! '
                             'Aguarde a aprovação do administrador.'
                         )
-                        return redirect('agendamentos:lista')
+                        return redirect(
+                            'agendamentos:detalhe', pk=agendamento.pk)
                 except ValidationError as e:
                     # Extrai a mensagem de erro corretamente
                     if hasattr(e, 'message'):
@@ -171,18 +194,18 @@ def editar_agendamento(request, pk):
                 for f in formset if f.cleaned_data and
                 not f.cleaned_data.get('DELETE', False)
             )
-            
+
             # Valida o limite de KM manualmente
             try:
                 form.validar_limite_km_manual(total_km_trajetos)
-                
+
                 with transaction.atomic():
                     agendamento = form.save()
                     formset.save()
 
                     messages.success(
                         request, 'Agendamento atualizado com sucesso!')
-                    return redirect('agendamentos:lista')
+                    return redirect('agendamentos:detalhe', pk=agendamento.pk)
             except ValidationError as e:
                 # Extrai a mensagem de erro corretamente
                 if hasattr(e, 'message'):
@@ -200,7 +223,8 @@ def editar_agendamento(request, pk):
         'form': form,
         'formset': formset,
         'titulo': 'Editar Agendamento',
-        'agendamento': agendamento
+        'agendamento': agendamento,
+        'is_edit': True
     })
 
 
@@ -209,11 +233,10 @@ def detalhe_agendamento(request, pk):
     """Exibe detalhes de um agendamento"""
     agendamento = get_object_or_404(Agendamento, pk=pk)
 
-    # Verifica permissão
-    if not request.user.is_administrador() and agendamento.professor != request.user:
-        messages.error(
-            request, 'Você não tem permissão para ver este agendamento.')
-        return redirect('agendamentos:lista')
+    # Todos os usuários logados podem ver detalhes dos agendamentos
+    # mas só podem editar/excluir os próprios (ou admin pode tudo)
+    can_edit = (request.user.is_administrador() or
+                agendamento.professor == request.user)
 
     trajetos = agendamento.trajetos.all()
     total_km = agendamento.get_total_km()
@@ -221,7 +244,8 @@ def detalhe_agendamento(request, pk):
     return render(request, 'agendamentos/detalhe.html', {
         'agendamento': agendamento,
         'trajetos': trajetos,
-        'total_km': total_km
+        'total_km': total_km,
+        'can_edit': can_edit
     })
 
 
@@ -256,12 +280,30 @@ def aprovacao_agendamentos(request):
     """Lista agendamentos pendentes para aprovação"""
     agendamentos_list = Agendamento.objects.filter(
         status='pendente'
-    ).select_related('curso', 'professor', 'veiculo').order_by('data_inicio')
+    ).select_related('curso', 'professor', 'veiculo')
+
+    # Filtros
+    curso_id = request.GET.get('curso')
+    if curso_id:
+        agendamentos_list = agendamentos_list.filter(curso_id=curso_id)
+
+    # Filtro por professor (busca por nome, email ou username)
+    professor_search = request.GET.get('professor')
+    if professor_search:
+        agendamentos_list = agendamentos_list.filter(
+            Q(professor__first_name__icontains=professor_search) |
+            Q(professor__last_name__icontains=professor_search) |
+            Q(professor__email__icontains=professor_search) |
+            Q(professor__username__icontains=professor_search)
+        )
+
+    # Ordenação
+    agendamentos_list = agendamentos_list.order_by('-criado_em')
 
     # Paginação
-    paginator = Paginator(agendamentos_list, 12)  # 12 agendamentos por página
+    paginator = Paginator(agendamentos_list, AGENDAMENTOS_APROVACAO_POR_PAGINA)
     page = request.GET.get('page')
-    
+
     try:
         agendamentos_pendentes = paginator.page(page)
     except PageNotAnInteger:
@@ -269,8 +311,14 @@ def aprovacao_agendamentos(request):
     except EmptyPage:
         agendamentos_pendentes = paginator.page(paginator.num_pages)
 
+    # Dados para filtros
+    cursos_disponiveis = Curso.objects.filter(ativo=True)
+
     return render(request, 'agendamentos/aprovacao.html', {
-        'agendamentos': agendamentos_pendentes
+        'agendamentos': agendamentos_pendentes,
+        'curso_filter': curso_id,
+        'professor_filter': professor_search,
+        'cursos_disponiveis': cursos_disponiveis,
     })
 
 
@@ -293,7 +341,8 @@ def aprovar_agendamento(request, pk):
                 error_msg = ' '.join(e.messages)
             else:
                 error_msg = str(e)
-            messages.error(request, f'Erro ao aprovar agendamento: {error_msg}')
+            messages.error(
+                request, f'Erro ao aprovar agendamento: {error_msg}')
             return redirect('agendamentos:detalhe', pk=pk)
 
     return redirect('agendamentos:detalhe', pk=pk)
@@ -319,13 +368,12 @@ def reprovar_agendamento(request, pk):
     return render(request, 'agendamentos/reprovar.html', {'agendamento': agendamento})
 
 
-@login_required
 def agendamentos_json(request):
-    """Retorna agendamentos em formato JSON para o calendário"""
-    if request.user.is_administrador():
-        agendamentos = Agendamento.objects.all()
-    else:
-        agendamentos = Agendamento.objects.filter(professor=request.user)
+    """Retorna agendamentos em formato JSON para o calendário (público)"""
+    # Todos podem ver os agendamentos no calendário
+    agendamentos = Agendamento.objects.all().select_related(
+        'professor', 'curso', 'veiculo'
+    )
 
     eventos = []
     for agendamento in agendamentos:
@@ -337,14 +385,48 @@ def agendamentos_json(request):
         else:  # reprovado
             color = '#dc3545'  # Vermelho
 
-        eventos.append({
+        # Verifica se o usuário está autenticado
+        if request.user.is_authenticated:
+            # Usuário logado - mostra informações completas
+            is_owner = agendamento.professor == request.user
+            can_edit = request.user.is_administrador() or is_owner
+
+            title = f"{agendamento.curso.nome} - {agendamento.veiculo.placa}"
+            if not is_owner and not request.user.is_administrador():
+                professor_name = (agendamento.professor.get_full_name() or
+                                  agendamento.professor.username)
+                title += f" ({professor_name})"
+
+            url = f'/agendamentos/{agendamento.id}/'
+            extended_props = {
+                'is_owner': is_owner,
+                'can_edit': can_edit,
+                'professor_name': (agendamento.professor.get_full_name() or
+                                   agendamento.professor.username),
+                'status': agendamento.status
+            }
+        else:
+            # Usuário não logado - mostra apenas informações básicas
+            title = f"{agendamento.curso.nome} - Agendado"
+            url = None  # Sem link para detalhes
+            extended_props = {
+                'requires_login': True
+            }
+
+        evento = {
             'id': agendamento.id,
-            'title': f"{agendamento.curso.nome} - {agendamento.veiculo.placa}",
+            'title': title,
             'start': agendamento.data_inicio.isoformat(),
             'end': agendamento.data_fim.isoformat(),
             'color': color,
-            'url': f'/agendamentos/{agendamento.id}/',
-        })
+            'extendedProps': extended_props
+        }
+
+        # Adiciona URL apenas se usuário estiver logado
+        if url:
+            evento['url'] = url
+
+        eventos.append(evento)
 
     return JsonResponse(eventos, safe=False)
 
@@ -358,40 +440,40 @@ def relatorio_geral(request):
     mes = request.GET.get('mes')
     curso_id = request.GET.get('curso')
     status = request.GET.get('status')
-    
+
     # Data atual para valores padrão
     hoje = timezone.now()
-    
+
     # Se não especificado, usar ano e mês atuais
     if not ano:
         ano = hoje.year
     else:
         ano = int(ano)
-        
+
     if not mes:
         mes = hoje.month
     else:
         mes = int(mes)
-    
+
     # Query base
     agendamentos = Agendamento.objects.filter(
         data_inicio__year=ano,
         data_inicio__month=mes
     ).select_related('curso', 'professor', 'veiculo')
-    
+
     # Aplicar filtros
     if curso_id:
         agendamentos = agendamentos.filter(curso_id=curso_id)
-    
+
     if status:
         agendamentos = agendamentos.filter(status=status)
-    
+
     # Estatísticas gerais
     total_agendamentos = agendamentos.count()
     agendamentos_aprovados = agendamentos.filter(status='aprovado').count()
     agendamentos_pendentes = agendamentos.filter(status='pendente').count()
     agendamentos_reprovados = agendamentos.filter(status='reprovado').count()
-    
+
     # Estatísticas por status
     stats_status = {
         'aprovado': agendamentos_aprovados,
@@ -399,45 +481,96 @@ def relatorio_geral(request):
         'reprovado': agendamentos_reprovados,
         'total': total_agendamentos
     }
-    
+
     # KM total por curso
     cursos_km = {}
     total_km = 0
-    
+
     for agendamento in agendamentos.filter(status='aprovado'):
         curso_nome = agendamento.curso.nome
         km_agendamento = agendamento.get_total_km()
-        
+
         if curso_nome not in cursos_km:
             cursos_km[curso_nome] = {
                 'km_total': 0,
                 'agendamentos': 0,
                 'limite_mensal': agendamento.curso.limite_km_mensal
             }
-        
+
         cursos_km[curso_nome]['km_total'] += km_agendamento
         cursos_km[curso_nome]['agendamentos'] += 1
         total_km += km_agendamento
-    
+
     # Calcular percentual de uso do limite para cada curso
     for curso_nome, dados in cursos_km.items():
-        dados['percentual_uso'] = (dados['km_total'] / dados['limite_mensal']) * 100
+        dados['percentual_uso'] = (
+            dados['km_total'] / dados['limite_mensal']) * 100
         dados['km_disponivel'] = dados['limite_mensal'] - dados['km_total']
-    
-    # Agendamentos por veículo
-    veiculos_stats = agendamentos.values(
+
+    # Agendamentos por veículo (com paginação)
+    veiculos_stats_list = agendamentos.values(
         'veiculo__placa', 'veiculo__marca', 'veiculo__modelo'
     ).annotate(
         total_agendamentos=Count('id')
     ).order_by('-total_agendamentos')
-    
-    # Agendamentos por professor
-    professores_stats = agendamentos.values(
-        'professor__first_name', 'professor__last_name'
-    ).annotate(
-        total_agendamentos=Count('id')
-    ).order_by('-total_agendamentos')
-    
+
+    veiculos_paginator = Paginator(
+        veiculos_stats_list, VEICULOS_POR_PAGINA)
+    page_veiculos = request.GET.get('page_veiculos')
+
+    try:
+        veiculos_stats = veiculos_paginator.page(page_veiculos)
+    except PageNotAnInteger:
+        veiculos_stats = veiculos_paginator.page(1)
+    except EmptyPage:
+        veiculos_stats = veiculos_paginator.page(veiculos_paginator.num_pages)
+
+    # Agendamentos por professor com quilometragem (com paginação)
+    from usuarios.models import Usuario
+
+    professores_stats_list = []
+    professores = Usuario.objects.filter(
+        tipo_usuario='professor').order_by('first_name', 'last_name')
+
+    for professor in professores:
+        professor_agendamentos = agendamentos.filter(professor=professor)
+
+        # Calcular total de KM
+        total_km = 0
+        for agendamento in professor_agendamentos:
+            total_km += agendamento.get_total_km()
+
+        # Contar agendamentos por status
+        stats = {
+            'professor': professor,
+            'professor__first_name': professor.first_name,
+            'professor__last_name': professor.last_name,
+            'total_km': total_km,
+            'total_agendamentos': professor_agendamentos.count(),
+            'pendentes': professor_agendamentos.filter(status='pendente').count(),
+            'aprovados': professor_agendamentos.filter(status='aprovado').count(),
+            'reprovados': professor_agendamentos.filter(status='reprovado').count(),
+        }
+
+        # Só incluir professores com agendamentos
+        if stats['total_agendamentos'] > 0:
+            professores_stats_list.append(stats)
+
+    # Ordenar por total de KM (maior para menor)
+    professores_stats_list.sort(key=lambda x: x['total_km'], reverse=True)
+
+    professores_paginator = Paginator(
+        professores_stats_list, PROFESSORES_POR_PAGINA)
+    page_professores = request.GET.get('page_professores')
+
+    try:
+        professores_stats = professores_paginator.page(page_professores)
+    except PageNotAnInteger:
+        professores_stats = professores_paginator.page(1)
+    except EmptyPage:
+        professores_stats = professores_paginator.page(
+            professores_paginator.num_pages)
+
     # Dados para os filtros
     anos_disponiveis = list(range(2023, hoje.year + 2))
     meses_disponiveis = [
@@ -446,22 +579,23 @@ def relatorio_geral(request):
         (9, 'Setembro'), (10, 'Outubro'), (11, 'Novembro'), (12, 'Dezembro')
     ]
     cursos_disponiveis = Curso.objects.filter(ativo=True)
-    
+
     # Nome do mês atual
     nome_mes = dict(meses_disponiveis)[mes]
-    
+
     # Paginação dos agendamentos
-    agendamentos_list = agendamentos.order_by('-data_inicio')
-    paginator = Paginator(agendamentos_list, 15)  # 15 agendamentos por página
+    agendamentos_list = agendamentos.order_by('-criado_em')
+    total_agendamentos_periodo = agendamentos_list.count()  # Total antes da paginação
+    paginator = Paginator(agendamentos_list, AGENDAMENTOS_RELATORIO_POR_PAGINA)
     page = request.GET.get('page')
-    
+
     try:
         agendamentos_paginados = paginator.page(page)
     except PageNotAnInteger:
         agendamentos_paginados = paginator.page(1)
     except EmptyPage:
         agendamentos_paginados = paginator.page(paginator.num_pages)
-    
+
     context = {
         'stats_status': stats_status,
         'cursos_km': cursos_km,
@@ -469,21 +603,22 @@ def relatorio_geral(request):
         'veiculos_stats': veiculos_stats,
         'professores_stats': professores_stats,
         'agendamentos': agendamentos_paginados,
-        
+        'total_agendamentos_periodo': total_agendamentos_periodo,
+
         # Filtros atuais
         'ano_atual': ano,
         'mes_atual': mes,
         'nome_mes': nome_mes,
         'curso_atual': curso_id,
         'status_atual': status,
-        
+
         # Opções para filtros
         'anos_disponiveis': anos_disponiveis,
         'meses_disponiveis': meses_disponiveis,
         'cursos_disponiveis': cursos_disponiveis,
         'status_choices': Agendamento.STATUS_CHOICES,
     }
-    
+
     return render(request, 'agendamentos/relatorio_geral.html', context)
 
 
@@ -493,25 +628,25 @@ def relatorio_por_curso(request):
     """Relatório detalhado por curso"""
     curso_id = request.GET.get('curso')
     ano = request.GET.get('ano')
-    
+
     hoje = timezone.now()
     if not ano:
         ano = hoje.year
     else:
         ano = int(ano)
-    
+
     # Se não especificar curso, pegar o primeiro ativo
     if not curso_id:
         primeiro_curso = Curso.objects.filter(ativo=True).first()
         if primeiro_curso:
             curso_id = primeiro_curso.id
-    
+
     curso = get_object_or_404(Curso, id=curso_id)
-    
+
     # Dados por mês do ano
     dados_mensais = []
     total_km_ano = 0
-    
+
     for mes_num in range(1, 13):
         agendamentos_mes = Agendamento.objects.filter(
             curso=curso,
@@ -519,10 +654,10 @@ def relatorio_por_curso(request):
             data_inicio__year=ano,
             data_inicio__month=mes_num
         )
-        
+
         km_mes = sum(a.get_total_km() for a in agendamentos_mes)
         total_agendamentos_mes = agendamentos_mes.count()
-        
+
         dados_mensais.append({
             'mes_numero': mes_num,
             'mes_nome': calendar.month_name[mes_num],
@@ -531,15 +666,15 @@ def relatorio_por_curso(request):
             'percentual_limite': (km_mes / curso.limite_km_mensal) * 100 if curso.limite_km_mensal > 0 else 0,
             'km_disponiveis': curso.limite_km_mensal - km_mes
         })
-        
+
         total_km_ano += km_mes
-    
+
     # Agendamentos detalhados do ano
     agendamentos_ano = Agendamento.objects.filter(
         curso=curso,
         data_inicio__year=ano
     ).select_related('professor', 'veiculo').order_by('-data_inicio')
-    
+
     # Estatísticas do curso no ano
     stats_ano = {
         'total_km': total_km_ano,
@@ -550,7 +685,7 @@ def relatorio_por_curso(request):
         'agendamentos_pendentes': agendamentos_ano.filter(status='pendente').count(),
         'agendamentos_reprovados': agendamentos_ano.filter(status='reprovado').count(),
     }
-    
+
     context = {
         'curso': curso,
         'ano': ano,
@@ -560,7 +695,7 @@ def relatorio_por_curso(request):
         'cursos_disponiveis': Curso.objects.filter(ativo=True),
         'anos_disponiveis': list(range(2023, hoje.year + 2)),
     }
-    
+
     return render(request, 'agendamentos/relatorio_por_curso.html', context)
 
 
@@ -573,34 +708,34 @@ def exportar_relatorio_excel(request):
     mes = request.GET.get('mes')
     curso_id = request.GET.get('curso')
     status = request.GET.get('status')
-    
+
     hoje = timezone.now()
     if not ano:
         ano = hoje.year
     else:
         ano = int(ano)
-        
+
     if not mes:
         mes = hoje.month
     else:
         mes = int(mes)
-    
+
     # Query base
     agendamentos = Agendamento.objects.filter(
         data_inicio__year=ano,
         data_inicio__month=mes
     ).select_related('curso', 'professor', 'veiculo')
-    
+
     # Aplicar filtros
     if curso_id:
         agendamentos = agendamentos.filter(curso_id=curso_id)
     if status:
         agendamentos = agendamentos.filter(status=status)
-    
+
     # Criar arquivo Excel
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output)
-    
+
     # Formatos
     title_format = workbook.add_format({
         'bold': True,
@@ -608,7 +743,7 @@ def exportar_relatorio_excel(request):
         'align': 'center',
         'valign': 'vcenter'
     })
-    
+
     header_format = workbook.add_format({
         'bold': True,
         'bg_color': '#4472C4',
@@ -616,45 +751,50 @@ def exportar_relatorio_excel(request):
         'align': 'center',
         'border': 1
     })
-    
+
     cell_format = workbook.add_format({
         'border': 1,
         'align': 'left'
     })
-    
+
     number_format = workbook.add_format({
         'border': 1,
         'align': 'right',
         'num_format': '#,##0'
     })
-    
+
     # Aba Principal - Agendamentos
     worksheet = workbook.add_worksheet('Agendamentos')
-    
+
     # Título
     meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
              'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
     titulo = f'Relatório de Agendamentos - {meses[mes]} {ano}'
     worksheet.merge_range('A1:H1', titulo, title_format)
-    
+
     # Cabeçalhos
-    headers = ['Data Início', 'Data Fim', 'Curso', 'Professor', 'Veículo', 'Status', 'KM Total', 'Observações']
+    headers = ['Data Início', 'Data Fim', 'Curso', 'Professor',
+               'Veículo', 'Status', 'KM Total', 'Observações']
     for col, header in enumerate(headers):
         worksheet.write(2, col, header, header_format)
-    
+
     # Dados
     row = 3
     for agendamento in agendamentos.order_by('-data_inicio'):
-        worksheet.write(row, 0, agendamento.data_inicio.strftime('%d/%m/%Y %H:%M'), cell_format)
-        worksheet.write(row, 1, agendamento.data_fim.strftime('%d/%m/%Y %H:%M'), cell_format)
+        worksheet.write(row, 0, agendamento.data_inicio.strftime(
+            '%d/%m/%Y %H:%M'), cell_format)
+        worksheet.write(row, 1, agendamento.data_fim.strftime(
+            '%d/%m/%Y %H:%M'), cell_format)
         worksheet.write(row, 2, agendamento.curso.nome, cell_format)
-        worksheet.write(row, 3, agendamento.professor.get_full_name(), cell_format)
-        worksheet.write(row, 4, f"{agendamento.veiculo.placa} - {agendamento.veiculo.marca} {agendamento.veiculo.modelo}", cell_format)
+        worksheet.write(
+            row, 3, agendamento.professor.get_full_name(), cell_format)
+        worksheet.write(
+            row, 4, f"{agendamento.veiculo.placa} - {agendamento.veiculo.marca} {agendamento.veiculo.modelo}", cell_format)
         worksheet.write(row, 5, agendamento.get_status_display(), cell_format)
         worksheet.write(row, 6, agendamento.get_total_km(), number_format)
         worksheet.write(row, 7, agendamento.observacoes or '', cell_format)
         row += 1
-    
+
     # Ajustar largura das colunas
     worksheet.set_column('A:A', 15)  # Data Início
     worksheet.set_column('B:B', 15)  # Data Fim
@@ -664,37 +804,40 @@ def exportar_relatorio_excel(request):
     worksheet.set_column('F:F', 12)  # Status
     worksheet.set_column('G:G', 10)  # KM
     worksheet.set_column('H:H', 30)  # Observações
-    
+
     # Aba Estatísticas por Curso
     stats_worksheet = workbook.add_worksheet('Estatísticas por Curso')
-    stats_worksheet.merge_range('A1:F1', f'Estatísticas por Curso - {meses[mes]} {ano}', title_format)
-    
+    stats_worksheet.merge_range(
+        'A1:F1', f'Estatísticas por Curso - {meses[mes]} {ano}', title_format)
+
     # Cabeçalhos estatísticas
-    stats_headers = ['Curso', 'KM Utilizados', 'Limite Mensal', 'KM Disponíveis', '% Uso', 'Agendamentos']
+    stats_headers = ['Curso', 'KM Utilizados', 'Limite Mensal',
+                     'KM Disponíveis', '% Uso', 'Agendamentos']
     for col, header in enumerate(stats_headers):
         stats_worksheet.write(2, col, header, header_format)
-    
+
     # Dados por curso
     cursos_km = {}
     for agendamento in agendamentos.filter(status='aprovado'):
         curso_nome = agendamento.curso.nome
         km_agendamento = agendamento.get_total_km()
-        
+
         if curso_nome not in cursos_km:
             cursos_km[curso_nome] = {
                 'km_total': 0,
                 'agendamentos': 0,
                 'limite_mensal': agendamento.curso.limite_km_mensal
             }
-        
+
         cursos_km[curso_nome]['km_total'] += km_agendamento
         cursos_km[curso_nome]['agendamentos'] += 1
-    
+
     row = 3
     for curso_nome, dados in cursos_km.items():
-        percentual = (dados['km_total'] / dados['limite_mensal']) * 100 if dados['limite_mensal'] > 0 else 0
+        percentual = (dados['km_total'] / dados['limite_mensal']
+                      ) * 100 if dados['limite_mensal'] > 0 else 0
         km_disponiveis = dados['limite_mensal'] - dados['km_total']
-        
+
         stats_worksheet.write(row, 0, curso_nome, cell_format)
         stats_worksheet.write(row, 1, dados['km_total'], number_format)
         stats_worksheet.write(row, 2, dados['limite_mensal'], number_format)
@@ -702,15 +845,67 @@ def exportar_relatorio_excel(request):
         stats_worksheet.write(row, 4, f"{percentual:.1f}%", cell_format)
         stats_worksheet.write(row, 5, dados['agendamentos'], number_format)
         row += 1
-    
+
     # Ajustar largura das colunas da aba estatísticas
     stats_worksheet.set_column('A:A', 25)  # Curso
     stats_worksheet.set_column('B:E', 15)  # Números
     stats_worksheet.set_column('F:F', 15)  # Agendamentos
-    
+
+    # Aba Estatísticas por Professor
+    from usuarios.models import Usuario
+
+    prof_worksheet = workbook.add_worksheet('Estatísticas por Professor')
+    prof_worksheet.merge_range(
+        'A1:H1', f'Estatísticas por Professor - {meses[mes]} {ano}', title_format)
+
+    # Cabeçalhos estatísticas professores
+    prof_headers = ['Professor', 'Email', 'Total KM', 'Agendamentos',
+                    'Aprovados', 'Pendentes', 'Reprovados', 'KM Médio/Agend.']
+    for col, header in enumerate(prof_headers):
+        prof_worksheet.write(2, col, header, header_format)
+
+    # Dados por professor
+    professores = Usuario.objects.filter(
+        tipo_usuario='professor').order_by('first_name', 'last_name')
+
+    row = 3
+    for professor in professores:
+        professor_agendamentos = agendamentos.filter(professor=professor)
+
+        # Calcular total de KM
+        total_km = sum(ag.get_total_km() for ag in professor_agendamentos)
+
+        # Contar agendamentos por status
+        total_agendamentos = professor_agendamentos.count()
+        aprovados = professor_agendamentos.filter(status='aprovado').count()
+        pendentes = professor_agendamentos.filter(status='pendente').count()
+        reprovados = professor_agendamentos.filter(status='reprovado').count()
+
+        # Só incluir professores com agendamentos
+        if total_agendamentos > 0:
+            km_medio = total_km / total_agendamentos if total_agendamentos > 0 else 0
+
+            prof_worksheet.write(
+                row, 0, professor.get_full_name(), cell_format)
+            prof_worksheet.write(row, 1, professor.email, cell_format)
+            prof_worksheet.write(row, 2, total_km, number_format)
+            prof_worksheet.write(row, 3, total_agendamentos, number_format)
+            prof_worksheet.write(row, 4, aprovados, number_format)
+            prof_worksheet.write(row, 5, pendentes, number_format)
+            prof_worksheet.write(row, 6, reprovados, number_format)
+            prof_worksheet.write(row, 7, f"{km_medio:.2f}", cell_format)
+            row += 1
+
+    # Ajustar largura das colunas da aba professores
+    prof_worksheet.set_column('A:A', 30)  # Professor
+    prof_worksheet.set_column('B:B', 30)  # Email
+    prof_worksheet.set_column('C:C', 12)  # Total KM
+    prof_worksheet.set_column('D:G', 12)  # Agendamentos
+    prof_worksheet.set_column('H:H', 15)  # KM Médio
+
     workbook.close()
     output.seek(0)
-    
+
     # Resposta HTTP
     filename = f'relatorio_agendamentos_{meses[mes].lower()}_{ano}.xlsx'
     response = HttpResponse(
@@ -718,7 +913,7 @@ def exportar_relatorio_excel(request):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    
+
     return response
 
 
@@ -731,39 +926,39 @@ def exportar_relatorio_pdf(request):
     mes = request.GET.get('mes')
     curso_id = request.GET.get('curso')
     status = request.GET.get('status')
-    
+
     hoje = timezone.now()
     if not ano:
         ano = hoje.year
     else:
         ano = int(ano)
-        
+
     if not mes:
         mes = hoje.month
     else:
         mes = int(mes)
-    
+
     # Query base
     agendamentos = Agendamento.objects.filter(
         data_inicio__year=ano,
         data_inicio__month=mes
     ).select_related('curso', 'professor', 'veiculo')
-    
+
     # Aplicar filtros
     if curso_id:
         agendamentos = agendamentos.filter(curso_id=curso_id)
         curso_nome = Curso.objects.get(id=curso_id).nome
     else:
         curso_nome = "Todos os Cursos"
-        
+
     if status:
         agendamentos = agendamentos.filter(status=status)
-    
+
     # Configurar PDF
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     elements = []
-    
+
     # Estilos
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
@@ -773,36 +968,39 @@ def exportar_relatorio_pdf(request):
         spaceAfter=30,
         alignment=1  # Center
     )
-    
+
     # Título
     meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
              'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
     titulo = f'Relatório de Agendamentos<br/>{meses[mes]} {ano}'
     elements.append(Paragraph(titulo, title_style))
     elements.append(Spacer(1, 12))
-    
+
     # Filtros aplicados
     filtros_text = f"<b>Filtros:</b> {curso_nome}"
     if status:
         filtros_text += f" | Status: {dict(Agendamento.STATUS_CHOICES)[status]}"
     elements.append(Paragraph(filtros_text, styles['Normal']))
     elements.append(Spacer(1, 12))
-    
+
     # Estatísticas gerais
     total_agendamentos = agendamentos.count()
     aprovados = agendamentos.filter(status='aprovado').count()
     pendentes = agendamentos.filter(status='pendente').count()
     reprovados = agendamentos.filter(status='reprovado').count()
-    total_km = sum(a.get_total_km() for a in agendamentos.filter(status='aprovado'))
-    
+    total_km = sum(a.get_total_km()
+                   for a in agendamentos.filter(status='aprovado'))
+
     stats_data = [
         ['Estatísticas Gerais', '', '', ''],
-        ['Total de Agendamentos', str(total_agendamentos), 'Aprovados', str(aprovados)],
+        ['Total de Agendamentos', str(
+            total_agendamentos), 'Aprovados', str(aprovados)],
         ['Pendentes', str(pendentes), 'Reprovados', str(reprovados)],
         ['Total KM (Aprovados)', f'{total_km} km', '', '']
     ]
-    
-    stats_table = Table(stats_data, colWidths=[2*inch, 1*inch, 1.5*inch, 1*inch])
+
+    stats_table = Table(stats_data, colWidths=[
+                        2*inch, 1*inch, 1.5*inch, 1*inch])
     stats_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -815,27 +1013,149 @@ def exportar_relatorio_pdf(request):
     ]))
     elements.append(stats_table)
     elements.append(Spacer(1, 20))
-    
+
+    # Quilometragem por Curso
+    cursos_km = Curso.objects.filter(
+        agendamentos__in=agendamentos.filter(status='aprovado')
+    ).annotate(
+        total_km=Sum('agendamentos__trajetos__quilometragem')
+    ).order_by('-total_km')[:10]
+
+    if cursos_km.exists():
+        elements.append(Paragraph(
+            '<b>Quilometragem por Curso (Top 10)</b>', styles['Heading2']))
+        elements.append(Spacer(1, 12))
+
+        curso_data = [['Curso', 'Total KM', 'Agendamentos']]
+        for curso in cursos_km:
+            agend_count = agendamentos.filter(
+                curso=curso, status='aprovado').count()
+            nome_curso = (curso.nome[:30] + '...' if len(curso.nome) > 30
+                          else curso.nome)
+            curso_data.append([
+                nome_curso,
+                f'{curso.total_km or 0} km',
+                str(agend_count)
+            ])
+
+        curso_table = Table(curso_data, colWidths=[3*inch, 1*inch, 1*inch])
+        curso_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(curso_table)
+        elements.append(Spacer(1, 20))
+
+    # Agendamentos por Veículo
+    veiculos_stats = Veiculo.objects.filter(
+        agendamentos__in=agendamentos
+    ).annotate(
+        total_agendamentos=models.Count('agendamentos'),
+        total_km=Sum('agendamentos__trajetos__quilometragem',
+                     filter=models.Q(agendamentos__status='aprovado'))
+    ).order_by('-total_agendamentos')[:10]
+
+    if veiculos_stats.exists():
+        elements.append(Paragraph(
+            '<b>Agendamentos por Veículo (Top 10)</b>', styles['Heading2']))
+        elements.append(Spacer(1, 12))
+
+        veiculo_data = [['Veículo', 'Agendamentos', 'KM Total']]
+        for veiculo in veiculos_stats:
+            veiculo_data.append([
+                f'{veiculo.placa} - {veiculo.marca} {veiculo.modelo}',
+                str(veiculo.total_agendamentos),
+                f'{veiculo.total_km or 0} km'
+            ])
+
+        veiculo_table = Table(veiculo_data, colWidths=[3*inch, 1*inch, 1*inch])
+        veiculo_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(veiculo_table)
+        elements.append(Spacer(1, 20))
+
+    # Quilometragem por Professor
+    from usuarios.models import Usuario
+    professores_km = Usuario.objects.filter(
+        tipo_usuario='professor',
+        agendamentos__in=agendamentos.filter(status='aprovado')
+    ).annotate(
+        total_km=Sum('agendamentos__trajetos__quilometragem'),
+        total_agendamentos=models.Count(
+            'agendamentos',
+            filter=models.Q(agendamentos__status='aprovado'))
+    ).order_by('-total_km')[:10]
+
+    if professores_km.exists():
+        elements.append(Paragraph(
+            '<b>Quilometragem por Professor (Top 10)</b>',
+            styles['Heading2']))
+        elements.append(Spacer(1, 12))
+
+        prof_data = [['Professor', 'Total KM', 'Agendamentos']]
+        for professor in professores_km:
+            full_name = professor.get_full_name()
+            nome_prof = (full_name[:25] + '...'
+                         if len(full_name) > 25 else full_name)
+            prof_data.append([
+                nome_prof,
+                f'{professor.total_km or 0} km',
+                str(professor.total_agendamentos)
+            ])
+
+        prof_table = Table(prof_data, colWidths=[3*inch, 1*inch, 1*inch])
+        prof_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(prof_table)
+        elements.append(Spacer(1, 20))
+
     # Tabela de agendamentos
     if agendamentos.exists():
-        elements.append(Paragraph('<b>Lista de Agendamentos</b>', styles['Heading2']))
+        elements.append(
+            Paragraph('<b>Lista de Agendamentos</b>', styles['Heading2']))
         elements.append(Spacer(1, 12))
-        
+
         # Cabeçalhos
         data = [['Data/Hora', 'Curso', 'Professor', 'Veículo', 'Status', 'KM']]
-        
+
         # Dados
-        for agendamento in agendamentos.order_by('-data_inicio')[:50]:  # Limitar a 50 para não sobrecarregar
+        # Limitar a 50 para não sobrecarregar
+        for agendamento in agendamentos.order_by('-data_inicio')[:50]:
             data.append([
                 agendamento.data_inicio.strftime('%d/%m %H:%M'),
-                agendamento.curso.nome[:15] + '...' if len(agendamento.curso.nome) > 15 else agendamento.curso.nome,
-                agendamento.professor.get_full_name()[:20] + '...' if len(agendamento.professor.get_full_name()) > 20 else agendamento.professor.get_full_name(),
+                agendamento.curso.nome[:15] + '...' if len(
+                    agendamento.curso.nome) > 15 else agendamento.curso.nome,
+                agendamento.professor.get_full_name()[:20] + '...' if len(
+                    agendamento.professor.get_full_name()) > 20 else agendamento.professor.get_full_name(),
                 agendamento.veiculo.placa,
                 agendamento.get_status_display(),
                 f'{agendamento.get_total_km()} km'
             ])
-        
-        table = Table(data, colWidths=[1*inch, 1.5*inch, 1.5*inch, 0.8*inch, 0.8*inch, 0.6*inch])
+
+        table = Table(data, colWidths=[
+                      1*inch, 1.5*inch, 1.5*inch, 0.8*inch, 0.8*inch, 0.6*inch])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -848,20 +1168,21 @@ def exportar_relatorio_pdf(request):
             ('GRID', (0, 0), (-1, -1), 1, colors.black)
         ]))
         elements.append(table)
-        
+
         if agendamentos.count() > 50:
             elements.append(Spacer(1, 12))
-            elements.append(Paragraph(f'<i>* Mostrando os primeiros 50 de {agendamentos.count()} agendamentos</i>', styles['Normal']))
-    
+            elements.append(Paragraph(
+                f'<i>* Mostrando os primeiros 50 de {agendamentos.count()} agendamentos</i>', styles['Normal']))
+
     # Gerar PDF
     doc.build(elements)
     buffer.seek(0)
-    
+
     # Resposta HTTP
     filename = f'relatorio_agendamentos_{meses[mes].lower()}_{ano}.pdf'
     response = HttpResponse(buffer.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    
+
     return response
 
 
@@ -871,31 +1192,31 @@ def exportar_curso_excel(request):
     """Exporta relatório por curso em Excel"""
     curso_id = request.GET.get('curso')
     ano = request.GET.get('ano')
-    
+
     hoje = timezone.now()
     if not ano:
         ano = hoje.year
     else:
         ano = int(ano)
-    
+
     if not curso_id:
         primeiro_curso = Curso.objects.filter(ativo=True).first()
         if primeiro_curso:
             curso_id = primeiro_curso.id
-    
+
     curso = get_object_or_404(Curso, id=curso_id)
-    
+
     # Criar arquivo Excel
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output)
-    
+
     # Formatos
     title_format = workbook.add_format({
         'bold': True,
         'font_size': 16,
         'align': 'center'
     })
-    
+
     header_format = workbook.add_format({
         'bold': True,
         'bg_color': '#4472C4',
@@ -903,19 +1224,20 @@ def exportar_curso_excel(request):
         'align': 'center',
         'border': 1
     })
-    
+
     cell_format = workbook.add_format({'border': 1})
     number_format = workbook.add_format({'border': 1, 'num_format': '#,##0'})
-    
+
     # Aba de dados mensais
     worksheet = workbook.add_worksheet('Dados Mensais')
     worksheet.merge_range('A1:G1', f'{curso.nome} - {ano}', title_format)
-    
+
     # Cabeçalhos
-    headers = ['Mês', 'KM Utilizados', 'Limite Mensal', 'KM Disponíveis', '% Uso', 'Agendamentos', 'Status']
+    headers = ['Mês', 'KM Utilizados', 'Limite Mensal',
+               'KM Disponíveis', '% Uso', 'Agendamentos', 'Status']
     for col, header in enumerate(headers):
         worksheet.write(2, col, header, header_format)
-    
+
     # Dados mensais
     row = 3
     for mes_num in range(1, 13):
@@ -925,19 +1247,20 @@ def exportar_curso_excel(request):
             data_inicio__year=ano,
             data_inicio__month=mes_num
         )
-        
+
         km_mes = sum(a.get_total_km() for a in agendamentos_mes)
         total_agendamentos_mes = agendamentos_mes.count()
-        percentual = (km_mes / curso.limite_km_mensal) * 100 if curso.limite_km_mensal > 0 else 0
+        percentual = (km_mes / curso.limite_km_mensal) * \
+            100 if curso.limite_km_mensal > 0 else 0
         km_disponiveis = curso.limite_km_mensal - km_mes
-        
+
         if percentual > 100:
             status = "Excedido"
         elif percentual > 80:
             status = "Atenção"
         else:
             status = "Normal"
-        
+
         worksheet.write(row, 0, calendar.month_name[mes_num], cell_format)
         worksheet.write(row, 1, km_mes, number_format)
         worksheet.write(row, 2, curso.limite_km_mensal, number_format)
@@ -946,15 +1269,15 @@ def exportar_curso_excel(request):
         worksheet.write(row, 5, total_agendamentos_mes, number_format)
         worksheet.write(row, 6, status, cell_format)
         row += 1
-    
+
     # Ajustar larguras
     worksheet.set_column('A:A', 15)
     worksheet.set_column('B:F', 12)
     worksheet.set_column('G:G', 10)
-    
+
     workbook.close()
     output.seek(0)
-    
+
     # Resposta HTTP
     filename = f'relatorio_{curso.nome.lower().replace(" ", "_")}_{ano}.xlsx'
     response = HttpResponse(
@@ -962,5 +1285,418 @@ def exportar_curso_excel(request):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    
+
+    return response
+
+
+@login_required
+@user_passes_test(is_administrador)
+def relatorio_por_professor(request):
+    """Gera relatório detalhado por professor específico"""
+    from usuarios.models import Usuario
+
+    # Obter lista de professores
+    professores = Usuario.objects.filter(
+        tipo_usuario='professor'
+    ).order_by('first_name', 'last_name')
+
+    # Filtros
+    professor_id = request.GET.get('professor')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    status = request.GET.get('status', '')
+
+    # Professor selecionado
+    professor_selecionado = None
+    agendamentos = Agendamento.objects.none()
+
+    if professor_id:
+        try:
+            professor_selecionado = Usuario.objects.get(
+                id=professor_id,
+                tipo_usuario='professor'
+            )
+
+            # Filtrar agendamentos do professor
+            agendamentos = Agendamento.objects.filter(
+                professor=professor_selecionado
+            )
+
+            # Aplicar filtros de data
+            if data_inicio:
+                agendamentos = agendamentos.filter(
+                    data_inicio__gte=data_inicio
+                )
+            if data_fim:
+                agendamentos = agendamentos.filter(
+                    data_fim__lte=data_fim
+                )
+
+            # Aplicar filtro de status
+            if status:
+                agendamentos = agendamentos.filter(status=status)
+
+            # Ordenar por data de criação (mais recentes primeiro)
+            agendamentos = agendamentos.order_by('-criado_em')
+
+        except Usuario.DoesNotExist:
+            professor_selecionado = None
+
+    # Estatísticas do professor
+    estatisticas = {}
+    if professor_selecionado and agendamentos.exists():
+        total_agendamentos = agendamentos.count()
+        total_km = agendamentos.aggregate(
+            total=Sum('trajetos__quilometragem')
+        )['total'] or 0
+
+        estatisticas = {
+            'total_agendamentos': total_agendamentos,
+            'pendentes': agendamentos.filter(status='pendente').count(),
+            'aprovados': agendamentos.filter(status='aprovado').count(),
+            'reprovados': agendamentos.filter(status='reprovado').count(),
+            'total_km': total_km,
+            'agendamentos_por_curso': agendamentos.values(
+                'curso__nome'
+            ).annotate(
+                count=Count('id')
+            ).order_by('-count')[:5],
+            'veiculos_utilizados': agendamentos.values(
+                'veiculo__marca',
+                'veiculo__modelo',
+                'veiculo__placa'
+            ).annotate(
+                count=Count('id')
+            ).order_by('-count')[:5],
+        }
+
+    # Paginação
+    paginator = Paginator(agendamentos, AGENDAMENTOS_RELATORIO_POR_PAGINA)
+    page = request.GET.get('page')
+
+    try:
+        agendamentos_paginados = paginator.page(page)
+    except PageNotAnInteger:
+        agendamentos_paginados = paginator.page(1)
+    except EmptyPage:
+        agendamentos_paginados = paginator.page(paginator.num_pages)
+
+    context = {
+        'professores': professores,
+        'professor_selecionado': professor_selecionado,
+        'agendamentos': agendamentos_paginados,
+        'estatisticas': estatisticas,
+        'professor_filter': professor_id,
+        'data_inicio_filter': data_inicio,
+        'data_fim_filter': data_fim,
+        'status_filter': status,
+        'status_choices': Agendamento.STATUS_CHOICES,
+    }
+
+    return render(request, 'agendamentos/relatorio_por_professor.html', context)
+
+
+@login_required
+@user_passes_test(is_administrador)
+def exportar_professor_excel(request):
+    """Exporta relatório por professor em Excel"""
+    from usuarios.models import Usuario
+
+    professor_id = request.GET.get('professor')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    status_filtro = request.GET.get('status')
+
+    if not professor_id:
+        messages.error(request, 'Selecione um professor para exportar.')
+        return redirect('agendamentos:relatorio_por_professor')
+
+    professor = get_object_or_404(
+        Usuario, id=professor_id, tipo_usuario='professor')
+
+    # Filtrar agendamentos
+    agendamentos = Agendamento.objects.filter(professor=professor)
+
+    if data_inicio:
+        agendamentos = agendamentos.filter(data_inicio__gte=data_inicio)
+    if data_fim:
+        agendamentos = agendamentos.filter(data_fim__lte=data_fim)
+    if status_filtro:
+        agendamentos = agendamentos.filter(status=status_filtro)
+
+    agendamentos = agendamentos.order_by('-data_inicio')
+
+    # Criar arquivo Excel
+    output = io.BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+
+    # Formatos
+    title_format = workbook.add_format({
+        'bold': True,
+        'font_size': 16,
+        'align': 'center',
+        'valign': 'vcenter'
+    })
+
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#4472C4',
+        'font_color': 'white',
+        'align': 'center',
+        'border': 1
+    })
+
+    cell_format = workbook.add_format({
+        'border': 1,
+        'align': 'left'
+    })
+
+    number_format = workbook.add_format({
+        'border': 1,
+        'align': 'right',
+        'num_format': '#,##0'
+    })
+
+    # Aba Principal - Agendamentos
+    worksheet = workbook.add_worksheet('Agendamentos')
+
+    # Título
+    titulo = f'Relatório de Agendamentos - Professor: {professor.get_full_name()}'
+    worksheet.merge_range('A1:H1', titulo, title_format)
+
+    # Informações do professor
+    worksheet.write('A3', 'Email:', header_format)
+    worksheet.write('B3', professor.email, cell_format)
+
+    # Cabeçalhos dos agendamentos
+    headers = ['Data Início', 'Data Fim', 'Curso', 'Veículo',
+               'Status', 'KM Total', 'Destino', 'Observações']
+    for col, header in enumerate(headers):
+        worksheet.write(5, col, header, header_format)
+
+    # Dados
+    row = 6
+    for agendamento in agendamentos:
+        worksheet.write(row, 0, agendamento.data_inicio.strftime(
+            '%d/%m/%Y %H:%M'), cell_format)
+        worksheet.write(row, 1, agendamento.data_fim.strftime(
+            '%d/%m/%Y %H:%M'), cell_format)
+        worksheet.write(row, 2, agendamento.curso.nome, cell_format)
+        worksheet.write(
+            row, 3, f"{agendamento.veiculo.placa} - {agendamento.veiculo.marca} {agendamento.veiculo.modelo}", cell_format)
+        worksheet.write(row, 4, agendamento.get_status_display(), cell_format)
+        worksheet.write(row, 5, agendamento.get_total_km(), number_format)
+
+        # Destinos dos trajetos
+        trajetos = agendamento.trajetos.all()
+        destinos = ', '.join([t.destino for t in trajetos])
+        worksheet.write(row, 6, destinos, cell_format)
+
+        worksheet.write(row, 7, agendamento.observacoes or '', cell_format)
+        row += 1
+
+    # Ajustar largura das colunas
+    worksheet.set_column('A:B', 15)
+    worksheet.set_column('C:C', 20)
+    worksheet.set_column('D:D', 25)
+    worksheet.set_column('E:E', 12)
+    worksheet.set_column('F:F', 10)
+    worksheet.set_column('G:G', 30)
+    worksheet.set_column('H:H', 30)
+
+    # Aba de Estatísticas
+    stats_worksheet = workbook.add_worksheet('Estatísticas')
+    stats_worksheet.merge_range(
+        'A1:B1', f'Estatísticas - {professor.get_full_name()}', title_format)
+
+    # Calcular estatísticas
+    total_agendamentos = agendamentos.count()
+    total_km = sum(a.get_total_km() for a in agendamentos)
+    aprovados = agendamentos.filter(status='aprovado').count()
+    pendentes = agendamentos.filter(status='pendente').count()
+    reprovados = agendamentos.filter(status='reprovado').count()
+
+    stats_data = [
+        ['Total de Agendamentos', total_agendamentos],
+        ['Total de KM', total_km],
+        ['Agendamentos Aprovados', aprovados],
+        ['Agendamentos Pendentes', pendentes],
+        ['Agendamentos Reprovados', reprovados],
+        ['KM Médio por Agendamento',
+            f"{total_km / total_agendamentos:.2f}" if total_agendamentos > 0 else "0"],
+    ]
+
+    row = 3
+    for label, value in stats_data:
+        stats_worksheet.write(row, 0, label, header_format)
+        stats_worksheet.write(row, 1, value, cell_format)
+        row += 1
+
+    stats_worksheet.set_column('A:A', 30)
+    stats_worksheet.set_column('B:B', 20)
+
+    workbook.close()
+    output.seek(0)
+
+    # Resposta HTTP
+    filename = f'relatorio_professor_{professor.get_full_name().lower().replace(" ", "_")}.xlsx'
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    return response
+
+
+@login_required
+@user_passes_test(is_administrador)
+def exportar_professor_pdf(request):
+    """Exporta relatório por professor em PDF"""
+    from usuarios.models import Usuario
+
+    professor_id = request.GET.get('professor')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    status_filtro = request.GET.get('status')
+
+    if not professor_id:
+        messages.error(request, 'Selecione um professor para exportar.')
+        return redirect('agendamentos:relatorio_por_professor')
+
+    professor = get_object_or_404(
+        Usuario, id=professor_id, tipo_usuario='professor')
+
+    # Filtrar agendamentos
+    agendamentos = Agendamento.objects.filter(professor=professor)
+
+    if data_inicio:
+        agendamentos = agendamentos.filter(data_inicio__gte=data_inicio)
+    if data_fim:
+        agendamentos = agendamentos.filter(data_fim__lte=data_fim)
+    if status_filtro:
+        agendamentos = agendamentos.filter(status=status_filtro)
+
+    agendamentos = agendamentos.order_by('-data_inicio')
+
+    # Criar PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+
+    # Estilos
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        textColor=colors.HexColor('#1f4788'),
+        spaceAfter=30,
+        alignment=1
+    )
+
+    # Título
+    title = Paragraph(
+        f'Relatório de Agendamentos<br/>Professor: {professor.get_full_name()}', title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 12))
+
+    # Informações do professor
+    info_data = [
+        ['Email:', professor.email],
+    ]
+
+    info_table = Table(info_data, colWidths=[100, 400])
+    info_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#4472C4')),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 20))
+
+    # Estatísticas
+    total_agendamentos = agendamentos.count()
+    total_km = sum(a.get_total_km() for a in agendamentos)
+    aprovados = agendamentos.filter(status='aprovado').count()
+    pendentes = agendamentos.filter(status='pendente').count()
+    reprovados = agendamentos.filter(status='reprovado').count()
+
+    stats_title = Paragraph('<b>Estatísticas</b>', styles['Heading2'])
+    elements.append(stats_title)
+    elements.append(Spacer(1, 12))
+
+    stats_data = [
+        ['Métrica', 'Valor'],
+        ['Total de Agendamentos', str(total_agendamentos)],
+        ['Total de KM', f"{total_km} km"],
+        ['Agendamentos Aprovados', str(aprovados)],
+        ['Agendamentos Pendentes', str(pendentes)],
+        ['Agendamentos Reprovados', str(reprovados)],
+    ]
+
+    stats_table = Table(stats_data, colWidths=[250, 250])
+    stats_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4472C4')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(stats_table)
+    elements.append(Spacer(1, 20))
+
+    # Lista de agendamentos
+    if agendamentos.exists():
+        agend_title = Paragraph('<b>Agendamentos</b>', styles['Heading2'])
+        elements.append(agend_title)
+        elements.append(Spacer(1, 12))
+
+        agend_data = [['Data', 'Curso', 'Veículo', 'Status', 'KM']]
+
+        # Limitar a 20 para não ficar muito grande
+        for agendamento in agendamentos[:20]:
+            agend_data.append([
+                agendamento.data_inicio.strftime('%d/%m/%Y'),
+                agendamento.curso.nome[:15],
+                f"{agendamento.veiculo.placa}",
+                agendamento.get_status_display(),
+                str(agendamento.get_total_km())
+            ])
+
+        agend_table = Table(agend_data, colWidths=[80, 120, 80, 80, 60])
+        agend_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4472C4')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(agend_table)
+
+        if agendamentos.count() > 20:
+            nota = Paragraph(
+                f'<i>Mostrando os 20 primeiros agendamentos de {agendamentos.count()} no total.</i>', styles['Normal'])
+            elements.append(Spacer(1, 12))
+            elements.append(nota)
+
+    # Construir PDF
+    doc.build(elements)
+    buffer.seek(0)
+
+    # Resposta HTTP
+    filename = f'relatorio_professor_{professor.get_full_name().lower().replace(" ", "_")}.pdf'
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
     return response

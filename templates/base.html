@@ -55,13 +55,13 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                {% if user.is_authenticated %}
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'dashboard' %}">
                             <i class="bi bi-calendar3"></i> Calendário
                         </a>
                     </li>
+                    {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'agendamentos:lista' %}">
                             <i class="bi bi-list-ul"></i> Meus Agendamentos
@@ -90,19 +90,21 @@
                         </ul>
                     </li>
                     {% endif %}
+                    {% endif %}
                 </ul>
+                {% if user.is_authenticated %}
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{% url 'editar_perfil' %}">
+                            <li><a class="dropdown-item" href="{% url 'usuarios:editar_perfil' %}">
                                 <i class="bi bi-person-fill"></i> Meu Perfil
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                                <form method="post" action="{% url 'usuarios:logout' %}" style="margin: 0;">
                                     {% csrf_token %}
                                     <button type="submit" class="dropdown-item" style="border: none; background: none; cursor: pointer; text-align: left; width: 100%;">
                                         <i class="bi bi-box-arrow-right"></i> Sair
@@ -110,6 +112,19 @@
                                 </form>
                             </li>
                         </ul>
+                    </li>
+                </ul>
+                {% else %}
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'usuarios:login' %}">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'usuarios:registro' %}">
+                            <i class="bi bi-person-plus"></i> Registrar
+                        </a>
                     </li>
                 </ul>
                 {% endif %}

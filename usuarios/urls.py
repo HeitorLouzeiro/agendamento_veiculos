@@ -1,16 +1,12 @@
 from django.urls import path
-from django.views.generic import RedirectView
 
 from .views import (CustomLoginView, CustomLogoutView, alterar_senha,
                     editar_perfil, recuperar_senha_step1,
                     recuperar_senha_step2, recuperar_senha_step3, registro)
 
+app_name = 'usuarios'
+
 urlpatterns = [
-    path(
-        '',
-        RedirectView.as_view(pattern_name='login', permanent=False),
-        name='home'
-    ),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
     path('registro/', registro, name='registro'),

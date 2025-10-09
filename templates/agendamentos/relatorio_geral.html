@@ -14,6 +14,9 @@
                 <a href="{% url 'agendamentos:relatorio_por_curso' %}" class="btn btn-outline-primary">
                     <i class="bi bi-book"></i> Por Curso
                 </a>
+                <a href="{% url 'agendamentos:relatorio_por_professor' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-person-lines-fill"></i> Por Professor
+                </a>
             </div>
             <div class="btn-group">
                 <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
@@ -223,7 +226,7 @@
     {% if veiculos_stats %}
     <div class="row mb-4">
         <div class="col-md-6">
-            <div class="card">
+            <div class="card" id="veiculos-section">
                 <div class="card-header">
                     <h5><i class="bi bi-car-front"></i> Agendamentos por Veículo</h5>
                 </div>
@@ -242,19 +245,58 @@
                                     <td>{{ veiculo.veiculo__placa }} - {{ veiculo.veiculo__marca }} {{ veiculo.veiculo__modelo }}</td>
                                     <td><span class="badge bg-primary">{{ veiculo.total_agendamentos }}</span></td>
                                 </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted">Nenhum veículo encontrado</td>
+                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Paginação para Veículos -->
+                    {% if veiculos_stats.has_other_pages %}
+                    <nav aria-label="Paginação de Veículos" class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-center">
+                            {% if veiculos_stats.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link veiculos-page-link" href="#" data-page="{{ veiculos_stats.previous_page_number }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in veiculos_stats.paginator.page_range %}
+                            {% if veiculos_stats.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > veiculos_stats.number|add:'-3' and num < veiculos_stats.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link veiculos-page-link" href="#" data-page="{{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+                            
+                            {% if veiculos_stats.has_next %}
+                            <li class="page-item">
+                                <a class="page-link veiculos-page-link" href="#" data-page="{{ veiculos_stats.next_page_number }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
         <!-- Estatísticas por Professor -->
         <div class="col-md-6">
-            <div class="card">
+            <div class="card" id="professores-section">
                 <div class="card-header">
-                    <h5><i class="bi bi-person"></i> Agendamentos por Professor</h5>
+                    <h5><i class="bi bi-speedometer2"></i> Relatório de Quilometragem por Professor</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -262,19 +304,84 @@
                             <thead>
                                 <tr>
                                     <th>Professor</th>
-                                    <th>Agendamentos</th>
+                                    <th>Total KM</th>
+                                    <th>Total</th>
+                                    <th>Pendentes</th>
+                                    <th>Aprovados</th>
+                                    <th>Reprovados</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for professor in professores_stats %}
                                 <tr>
                                     <td>{{ professor.professor__first_name }} {{ professor.professor__last_name }}</td>
+                                    <td><span class="badge bg-info">{{ professor.total_km }} km</span></td>
                                     <td><span class="badge bg-primary">{{ professor.total_agendamentos }}</span></td>
+                                    <td>
+                                        {% if professor.pendentes > 0 %}
+                                        <span class="badge bg-warning">{{ professor.pendentes }}</span>
+                                        {% else %}
+                                        <span class="text-muted">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if professor.aprovados > 0 %}
+                                        <span class="badge bg-success">{{ professor.aprovados }}</span>
+                                        {% else %}
+                                        <span class="text-muted">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if professor.reprovados > 0 %}
+                                        <span class="badge bg-danger">{{ professor.reprovados }}</span>
+                                        {% else %}
+                                        <span class="text-muted">0</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">Nenhum professor encontrado</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Paginação para Professores -->
+                    {% if professores_stats.has_other_pages %}
+                    <nav aria-label="Paginação de Professores" class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-center">
+                            {% if professores_stats.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link professores-page-link" href="#" data-page="{{ professores_stats.previous_page_number }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in professores_stats.paginator.page_range %}
+                            {% if professores_stats.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > professores_stats.number|add:'-3' and num < professores_stats.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link professores-page-link" href="#" data-page="{{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+                            
+                            {% if professores_stats.has_next %}
+                            <li class="page-item">
+                                <a class="page-link professores-page-link" href="#" data-page="{{ professores_stats.next_page_number }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -282,9 +389,9 @@
     {% endif %}
 
     <!-- Lista de Agendamentos -->
-    <div class="card">
+    <div class="card" id="agendamentos-section">
         <div class="card-header">
-            <h5><i class="bi bi-list"></i> Agendamentos do Período ({{ agendamentos.count }})</h5>
+            <h5><i class="bi bi-list"></i> Agendamentos do Período ({{ total_agendamentos_periodo }})</h5>
         </div>
         <div class="card-body">
             {% if agendamentos %}
@@ -340,12 +447,12 @@
                 <ul class="pagination justify-content-center">
                     {% if agendamentos.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page=1&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}" aria-label="Primeira">
+                            <a class="page-link agendamentos-page-link" href="?page=1&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}" data-page="1" aria-label="Primeira">
                                 <span aria-hidden="true">&laquo;&laquo;</span>
                             </a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ agendamentos.previous_page_number }}&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}" aria-label="Anterior">
+                            <a class="page-link agendamentos-page-link" href="?page={{ agendamentos.previous_page_number }}&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}" data-page="{{ agendamentos.previous_page_number }}" aria-label="Anterior">
                                 <span aria-hidden="true">&laquo;</span>
                             </a>
                         </li>
@@ -358,19 +465,19 @@
                             </li>
                         {% elif num > agendamentos.number|add:'-3' and num < agendamentos.number|add:'3' %}
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}">{{ num }}</a>
+                                <a class="page-link agendamentos-page-link" href="?page={{ num }}&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}" data-page="{{ num }}">{{ num }}</a>
                             </li>
                         {% endif %}
                     {% endfor %}
                     
                     {% if agendamentos.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ agendamentos.next_page_number }}&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}" aria-label="Próxima">
+                            <a class="page-link agendamentos-page-link" href="?page={{ agendamentos.next_page_number }}&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}" data-page="{{ agendamentos.next_page_number }}" aria-label="Próxima">
                                 <span aria-hidden="true">&raquo;</span>
                             </a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ agendamentos.paginator.num_pages }}&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}" aria-label="Última">
+                            <a class="page-link agendamentos-page-link" href="?page={{ agendamentos.paginator.num_pages }}&ano={{ ano_atual }}&mes={{ mes_atual }}{% if curso_atual %}&curso={{ curso_atual }}{% endif %}{% if status_atual %}&status={{ status_atual }}{% endif %}" data-page="{{ agendamentos.paginator.num_pages }}" aria-label="Última">
                                 <span aria-hidden="true">&raquo;&raquo;</span>
                             </a>
                         </li>
@@ -399,4 +506,92 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Função para obter parâmetros atuais da URL
+    function getCurrentParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return {
+            ano: urlParams.get('ano'),
+            mes: urlParams.get('mes'),
+            curso: urlParams.get('curso'),
+            status: urlParams.get('status'),
+            page: urlParams.get('page')
+        };
+    }
+    
+    // Função para construir URL com parâmetros
+    function buildUrl(params) {
+        const url = new URL(window.location.pathname, window.location.origin);
+        Object.keys(params).forEach(key => {
+            if (params[key]) {
+                url.searchParams.set(key, params[key]);
+            }
+        });
+        return url.toString();
+    }
+    
+    // Paginação de Veículos
+    document.querySelectorAll('.veiculos-page-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = this.getAttribute('data-page');
+            const params = getCurrentParams();
+            params.page_veiculos = page;
+            
+            // Salvar posição da seção antes de navegar
+            sessionStorage.setItem('scrollToSection', 'veiculos-section');
+            
+            window.location.href = buildUrl(params);
+        });
+    });
+    
+    // Paginação de Professores
+    document.querySelectorAll('.professores-page-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = this.getAttribute('data-page');
+            const params = getCurrentParams();
+            params.page_professores = page;
+            
+            // Salvar posição da seção antes de navegar
+            sessionStorage.setItem('scrollToSection', 'professores-section');
+            
+            window.location.href = buildUrl(params);
+        });
+    });
+    
+    // Paginação de Agendamentos
+    document.querySelectorAll('.agendamentos-page-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = this.getAttribute('data-page');
+            const params = getCurrentParams();
+            params.page = page;
+            
+            // Salvar posição da seção antes de navegar
+            sessionStorage.setItem('scrollToSection', 'agendamentos-section');
+            
+            window.location.href = buildUrl(params);
+        });
+    });
+    
+    // Scroll para a seção correta após carregamento da página
+    const scrollToSection = sessionStorage.getItem('scrollToSection');
+    if (scrollToSection) {
+        sessionStorage.removeItem('scrollToSection');
+        setTimeout(function() {
+            const section = document.getElementById(scrollToSection);
+            if (section) {
+                section.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }, 100);
+    }
+});
+</script>
+
 {% endblock %}

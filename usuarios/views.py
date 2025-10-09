@@ -16,7 +16,7 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
 
     def get_success_url(self):
-        return '/dashboard/'
+        return '/'
 
     def form_valid(self, form):
         """Converte username para minúsculas antes de validar"""
@@ -28,7 +28,7 @@ class CustomLoginView(LoginView):
 
 class CustomLogoutView(LogoutView):
     """View customizada de logout"""
-    next_page = 'login'
+    next_page = 'usuarios:login'
 
 
 def registro(request):
@@ -40,7 +40,10 @@ def registro(request):
         form = RegistroForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)  # Faz login automático após registro
+            # Define o backend antes do login para evitar erro de múltiplos backends
+            backend = 'usuarios.backends.EmailOrUsernameBackend'
+            user.backend = backend
+            login(request, user, backend=backend)
             messages.success(
                 request,
                 f'Bem-vindo, {user.get_full_name()}! '
@@ -77,11 +80,11 @@ def recuperar_senha_step1(request):
                         'Este usuário não possui perguntas de segurança '
                         'configuradas. Entre em contato com o administrador.'
                     )
-                    return redirect('recuperar_senha_step1')
+                    return redirect('usuarios:recuperar_senha_step1')
 
                 # Salva username real na sessão (não o email)
                 request.session['recuperar_username'] = usuario.username
-                return redirect('recuperar_senha_step2')
+                return redirect('usuarios:recuperar_senha_step2')
             except Usuario.DoesNotExist:
                 messages.error(
                     request,
@@ -114,7 +117,7 @@ def recuperar_senha_step2(request):
             request,
             'Sessão expirada. Por favor, comece novamente.'
         )
-        return redirect('recuperar_senha_step1')
+        return redirect('usuarios:recuperar_senha_step1')
 
     try:
         usuario = Usuario.objects.get(username=username)
@@ -147,7 +150,7 @@ def recuperar_senha_step2(request):
                resposta_2 == resposta_correta_2:
                 # Respostas corretas
                 request.session['recuperar_verificado'] = True
-                return redirect('recuperar_senha_step3')
+                return redirect('usuarios:recuperar_senha_step3')
             else:
                 messages.error(
                     request,
@@ -180,13 +183,13 @@ def recuperar_senha_step3(request):
             request,
             'Sessão inválida. Por favor, comece novamente.'
         )
-        return redirect('recuperar_senha_step1')
+        return redirect('usuarios:recuperar_senha_step1')
 
     try:
         usuario = Usuario.objects.get(username=username)
     except Usuario.DoesNotExist:
         messages.error(request, 'Usuário não encontrado.')
-        return redirect('recuperar_senha_step1')
+        return redirect('usuarios:recuperar_senha_step1')
 
     if request.method == 'POST':
         form = RecuperarSenhaStep3Form(request.POST)
@@ -203,7 +206,7 @@ def recuperar_senha_step3(request):
                 request,
                 'Senha alterada com sucesso! Você já pode fazer login.'
             )
-            return redirect('login')
+            return redirect('usuarios:login')
     else:
         form = RecuperarSenhaStep3Form()
 
@@ -217,7 +220,7 @@ def recuperar_senha_step3(request):
 def editar_perfil(request):
     """View para editar perfil do usuário"""
     if not request.user.is_authenticated:
-        return redirect('login')
+        return redirect('usuarios:login')
 
     if request.method == 'POST':
         form = EditarPerfilForm(
@@ -231,7 +234,7 @@ def editar_perfil(request):
                 request,
                 'Perfil atualizado com sucesso!'
             )
-            return redirect('editar_perfil')
+            return redirect('usuarios:editar_perfil')
     else:
         form = EditarPerfilForm(
             instance=request.user,
@@ -248,7 +251,7 @@ def editar_perfil(request):
 def alterar_senha(request):
     """View para alterar senha do usuário"""
     if not request.user.is_authenticated:
-        return redirect('login')
+        return redirect('usuarios:login')
 
     if request.method == 'POST':
         form = AlterarSenhaForm(request.POST, user=request.user)
@@ -258,13 +261,15 @@ def alterar_senha(request):
             request.user.save()
 
             # Faz login novamente para manter sessão ativa
-            login(request, request.user)
+            backend = 'usuarios.backends.EmailOrUsernameBackend'
+            request.user.backend = backend
+            login(request, request.user, backend=backend)
 
             messages.success(
                 request,
                 'Senha alterada com sucesso!'
             )
-            return redirect('editar_perfil')
+            return redirect('usuarios:editar_perfil')
     else:
         form = AlterarSenhaForm(user=request.user)
 

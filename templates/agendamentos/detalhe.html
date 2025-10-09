@@ -126,6 +126,12 @@
                            class="btn btn-danger w-100 mb-2">
                             <i class="bi bi-x-circle"></i> Reprovar
                         </a>
+
+                        <!-- Ação de Editar (sempre disponível para admin) -->
+                        <a href="{% url 'agendamentos:editar' agendamento.pk %}" 
+                           class="btn btn-warning w-100 mb-2">
+                            <i class="bi bi-pencil"></i> Editar
+                        </a>
                         {% elif agendamento.status == 'aprovado' %}
                         <a href="{% url 'agendamentos:reprovar' agendamento.pk %}" 
                            class="btn btn-warning w-100 mb-2">
@@ -150,7 +156,7 @@
                         {% endif %}
                     {% else %}
                         <!-- Ações para Professores -->
-                        {% if agendamento.status == 'pendente' and agendamento.professor == user %}
+                        {% if can_edit and agendamento.status == 'pendente' %}
                         <a href="{% url 'agendamentos:editar' agendamento.pk %}" 
                            class="btn btn-primary w-100 mb-2">
                             <i class="bi bi-pencil"></i> Editar
@@ -162,7 +168,11 @@
                         {% else %}
                         <div class="alert alert-info mb-0">
                             <i class="bi bi-info-circle"></i> 
-                            Este agendamento não pode mais ser editado.
+                            {% if not can_edit %}
+                                Você não pode editar este agendamento de outro professor.
+                            {% else %}
+                                Este agendamento não pode mais ser editado.
+                            {% endif %}
                         </div>
                         {% endif %}
                     {% endif %}
