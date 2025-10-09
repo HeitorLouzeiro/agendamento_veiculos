@@ -242,7 +242,7 @@
                             <tbody>
                                 {% for veiculo in veiculos_stats %}
                                 <tr>
-                                    <td>{{ veiculo.veiculo__placa }} - {{ veiculo.veiculo__marca }} {{ veiculo.veiculo__modelo }}</td>
+                                    <td>{{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}</td>
                                     <td><span class="badge bg-primary">{{ veiculo.total_agendamentos }}</span></td>
                                 </tr>
                                 {% empty %}

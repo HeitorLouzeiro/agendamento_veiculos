@@ -53,6 +53,63 @@
         </div>
         {% endfor %}
     </div>
+    
+    <!-- Paginação -->
+    {% if veiculos.has_other_pages %}
+    <nav aria-label="Navegação da paginação">
+        <ul class="pagination justify-content-center">
+            {% if veiculos.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="Primeira">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ veiculos.previous_page_number }}" aria-label="Anterior">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            {% endif %}
+            
+            {% for num in veiculos.paginator.page_range %}
+                {% if veiculos.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > veiculos.number|add:'-3' and num < veiculos.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if veiculos.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ veiculos.next_page_number }}" aria-label="Próxima">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ veiculos.paginator.num_pages }}" aria-label="Última">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    
+    <!-- Informações da paginação -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <small class="text-muted">
+            Mostrando {{ veiculos.start_index }} a {{ veiculos.end_index }} 
+            de {{ veiculos.paginator.count }} veículos
+        </small>
+        <small class="text-muted">
+            Página {{ veiculos.number }} de {{ veiculos.paginator.num_pages }}
+        </small>
+    </div>
+    {% endif %}
+    
     {% else %}
     <div class="alert alert-info">
         <i class="bi bi-info-circle"></i> Nenhum veículo cadastrado ainda.
