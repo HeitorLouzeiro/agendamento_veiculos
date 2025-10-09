@@ -33,6 +33,7 @@ AGENDAMENTOS_RELATORIO_POR_PAGINA = 15
 AGENDAMENTOS_APROVACAO_POR_PAGINA = 10
 VEICULOS_POR_PAGINA = 5
 PROFESSORES_POR_PAGINA = 5
+PROFESSORES_RELATORIO_POR_PAGINA = 10
 
 
 def is_administrador(user):
@@ -524,12 +525,39 @@ def relatorio_geral(request):
     except EmptyPage:
         veiculos_stats = veiculos_paginator.page(veiculos_paginator.num_pages)
 
-    # Agendamentos por professor (com paginação)
-    professores_stats_list = agendamentos.values(
-        'professor__first_name', 'professor__last_name'
-    ).annotate(
-        total_agendamentos=Count('id')
-    ).order_by('-total_agendamentos')
+    # Agendamentos por professor com quilometragem (com paginação)
+    from usuarios.models import Usuario
+
+    professores_stats_list = []
+    professores = Usuario.objects.filter(
+        tipo_usuario='professor').order_by('first_name', 'last_name')
+
+    for professor in professores:
+        professor_agendamentos = agendamentos.filter(professor=professor)
+
+        # Calcular total de KM
+        total_km = 0
+        for agendamento in professor_agendamentos:
+            total_km += agendamento.get_total_km()
+
+        # Contar agendamentos por status
+        stats = {
+            'professor': professor,
+            'professor__first_name': professor.first_name,
+            'professor__last_name': professor.last_name,
+            'total_km': total_km,
+            'total_agendamentos': professor_agendamentos.count(),
+            'pendentes': professor_agendamentos.filter(status='pendente').count(),
+            'aprovados': professor_agendamentos.filter(status='aprovado').count(),
+            'reprovados': professor_agendamentos.filter(status='reprovado').count(),
+        }
+
+        # Só incluir professores com agendamentos
+        if stats['total_agendamentos'] > 0:
+            professores_stats_list.append(stats)
+
+    # Ordenar por total de KM (maior para menor)
+    professores_stats_list.sort(key=lambda x: x['total_km'], reverse=True)
 
     professores_paginator = Paginator(
         professores_stats_list, PROFESSORES_POR_PAGINA)
@@ -1090,3 +1118,110 @@ def exportar_curso_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     return response
+
+
+@login_required
+@user_passes_test(is_administrador)
+def relatorio_por_professor(request):
+    """Gera relatório detalhado por professor específico"""
+    from usuarios.models import Usuario
+
+    # Obter lista de professores
+    professores = Usuario.objects.filter(
+        tipo_usuario='professor'
+    ).order_by('first_name', 'last_name')
+
+    # Filtros
+    professor_id = request.GET.get('professor')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    status = request.GET.get('status', '')
+
+    # Professor selecionado
+    professor_selecionado = None
+    agendamentos = Agendamento.objects.none()
+
+    if professor_id:
+        try:
+            professor_selecionado = Usuario.objects.get(
+                id=professor_id,
+                tipo_usuario='professor'
+            )
+
+            # Filtrar agendamentos do professor
+            agendamentos = Agendamento.objects.filter(
+                professor=professor_selecionado
+            )
+
+            # Aplicar filtros de data
+            if data_inicio:
+                agendamentos = agendamentos.filter(
+                    data_inicio__gte=data_inicio
+                )
+            if data_fim:
+                agendamentos = agendamentos.filter(
+                    data_fim__lte=data_fim
+                )
+
+            # Aplicar filtro de status
+            if status:
+                agendamentos = agendamentos.filter(status=status)
+
+            # Ordenar por data de criação (mais recentes primeiro)
+            agendamentos = agendamentos.order_by('-criado_em')
+
+        except Usuario.DoesNotExist:
+            professor_selecionado = None
+
+    # Estatísticas do professor
+    estatisticas = {}
+    if professor_selecionado and agendamentos.exists():
+        total_agendamentos = agendamentos.count()
+        total_km = agendamentos.aggregate(
+            total=Sum('trajetos__quilometragem')
+        )['total'] or 0
+
+        estatisticas = {
+            'total_agendamentos': total_agendamentos,
+            'pendentes': agendamentos.filter(status='pendente').count(),
+            'aprovados': agendamentos.filter(status='aprovado').count(),
+            'reprovados': agendamentos.filter(status='reprovado').count(),
+            'total_km': total_km,
+            'agendamentos_por_curso': agendamentos.values(
+                'curso__nome'
+            ).annotate(
+                count=Count('id')
+            ).order_by('-count')[:5],
+            'veiculos_utilizados': agendamentos.values(
+                'veiculo__marca',
+                'veiculo__modelo',
+                'veiculo__placa'
+            ).annotate(
+                count=Count('id')
+            ).order_by('-count')[:5],
+        }
+
+    # Paginação
+    paginator = Paginator(agendamentos, AGENDAMENTOS_RELATORIO_POR_PAGINA)
+    page = request.GET.get('page')
+
+    try:
+        agendamentos_paginados = paginator.page(page)
+    except PageNotAnInteger:
+        agendamentos_paginados = paginator.page(1)
+    except EmptyPage:
+        agendamentos_paginados = paginator.page(paginator.num_pages)
+
+    context = {
+        'professores': professores,
+        'professor_selecionado': professor_selecionado,
+        'agendamentos': agendamentos_paginados,
+        'estatisticas': estatisticas,
+        'professor_filter': professor_id,
+        'data_inicio_filter': data_inicio,
+        'data_fim_filter': data_fim,
+        'status_filter': status,
+        'status_choices': Agendamento.STATUS_CHOICES,
+    }
+
+    return render(request, 'agendamentos/relatorio_por_professor.html', context)
