@@ -4,17 +4,22 @@ Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com 
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white)
 
 ## 📋 Sumário
 
 - [🚀 Início Rápido](#-início-rápido)
+  - [🐳 Com Docker (Recomendado)](#-com-docker-recomendado)
+  - [⚡ Com Scripts de Automação](#-com-scripts-de-automação)
+  - [🛠️ Instalação Manual](#%EF%B8%8F-instalação-manual)
 - [🏗️ Arquitetura](#%EF%B8%8F-arquitetura)
 - [✨ Funcionalidades](#-funcionalidades)
 - [🛠️ Tecnologias](#%EF%B8%8F-tecnologias)
 - [📦 Instalação](#-instalação)
-- [🔧 Configuração](#-configuração)
+- [🔧 Configuração Básica](#-configuração-básica)
+- [🐳 Docker](#-docker)
 - [⚡ Scripts de Automação](#-scripts-de-automação)
 - [🏃‍♂️ Comandos Úteis](#%EF%B8%8F-comandos-úteis)
 - [📖 Uso do Sistema](#-uso-do-sistema)
@@ -27,7 +32,36 @@ Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com 
 
 ## 🚀 Início Rápido
 
-### ⚡ Com Scripts de Automação (Recomendado)
+### 🐳 Com Docker (Recomendado)
+
+```bash
+# Clone o projeto
+git clone https://github.com/HeitorLouzeiro/agendamento_veiculos.git
+cd agendamento_veiculos
+
+# Configure as variáveis de ambiente
+cp .env.example .env
+
+# Setup completo com Docker
+docker-setup.bat  # Windows
+# ou
+./docker-setup.sh  # Linux/Mac
+
+# Iniciar aplicação
+docker-compose up
+```
+
+**Ou manualmente com Docker:**
+```bash
+# Construir e iniciar serviços
+docker-compose build
+docker-compose up -d db
+docker-compose run --rm web python manage.py migrate
+docker-compose run --rm web python manage.py createsuperuser
+docker-compose up
+```
+
+### ⚡ Com Scripts de Automação
 
 ```bash
 # Clone o projeto
@@ -41,7 +75,7 @@ cd agendamento_veiculos
 ./start.sh
 ```
 
-### 🛠️ Manual (Tradicional)
+### 🛠️ Instalação Manual
 
 ```bash
 # Clone e configure manualmente
@@ -61,9 +95,11 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-✅ Acesse: **http://127.0.0.1:8000**
+✅ **Acesse a aplicação:**
+- **Local/Scripts:** http://127.0.0.1:8000
+- **Docker:** http://localhost:8000
 
-> 💡 **Dica:** Use os scripts de automação para uma experiência mais rápida! Veja [SCRIPTS.md](SCRIPTS.md) para detalhes.
+> 💡 **Dica:** Docker oferece maior consistência entre ambientes. Para desenvolvimento local tradicional, use os scripts de automação. Veja [DOCKER.md](DOCKER.md) e [SCRIPTS.md](SCRIPTS.md) para detalhes.
 
 ## 🏗️ Arquitetura
 
@@ -88,7 +124,8 @@ O sistema segue a arquitetura **MVT (Model-View-Template)** do Django:
 └────────────────────────────┼────────────────────────────────┘
                              │
                     ┌────────▼────────┐
-                    │  SQLite Database │
+                    │ SQLite/PostgreSQL│
+                    │    Database      │
                     └─────────────────┘
 ```
 
@@ -135,7 +172,9 @@ O sistema segue a arquitetura **MVT (Model-View-Template)** do Django:
 ### Backend
 - **Python** 3.12+ - Linguagem de programação
 - **Django** 5.2.7 - Framework web
-- **SQLite** - Banco de dados (desenvolvimento)
+- **SQLite** - Banco de dados (desenvolvimento local)
+- **PostgreSQL** 15 - Banco de dados (produção/Docker)
+- **psycopg2-binary** - Adaptador PostgreSQL para Python
 - **Django ORM** - Mapeamento objeto-relacional
 - **Django Auth** - Sistema de autenticação
 
@@ -155,23 +194,48 @@ O sistema segue a arquitetura **MVT (Model-View-Template)** do Django:
 - **gunicorn** 23.0.0 - Servidor WSGI para produção
 - **whitenoise** 6.11.0 - Servir arquivos estáticos em produção
 
+### DevOps & Containerização
+- **Docker** - Containerização da aplicação
+- **Docker Compose** - Orquestração de containers
+- **PostgreSQL** (Docker) - Banco de dados em container
+- **WhiteNoise** - Servir arquivos estáticos em produção
+
 ## 📦 Instalação
 
 ### Pré-requisitos
 
+#### Para Desenvolvimento Local
 - **Python** 3.12 ou superior
 - **pip** (gerenciador de pacotes Python)
 - **Git** (para clonar o repositório)
 - **Virtualenv** (recomendado)
 
+#### Para Docker (Recomendado)
+- **Docker** (20.10+)
+- **Docker Compose** (2.0+)
+- **Git** (para clonar o repositório)
+
 ### Verificação de Dependências
 
+**Para desenvolvimento local:**
 ```bash
 # Verificar Python
 python --version
 
 # Verificar pip
 pip --version
+
+# Verificar Git
+git --version
+```
+
+**Para Docker:**
+```bash
+# Verificar Docker
+docker --version
+
+# Verificar Docker Compose
+docker-compose --version
 
 # Verificar Git
 git --version
@@ -197,13 +261,32 @@ source venv/bin/activate
 
 #### Dados de Exemplo (Opcional)
 
-Execute `python manage.py load_sample_data` para criar:
-- 🔐 **3 administradores** com credenciais de teste
-- 👨‍🏫 **10 professores** com perfis completos  
-- 📚 **5 cursos** diversos com limites de KM
+Execute o comando para criar dados de teste:
+
+```bash
+# Comando básico (valores padrão)
+python manage.py load_sample_data
+
+# Com parâmetros customizados
+python manage.py load_sample_data --professores 15 --agendamentos 50 --administradores 5
+
+# Para Docker
+docker-compose run --rm web python manage.py load_sample_data --professores 10 --agendamentos 20
+```
+
+**Parâmetros disponíveis:**
+- `--administradores` - Quantidade de administradores (padrão: 3)
+- `--professores` - Quantidade de professores (padrão: 10) 
+- `--agendamentos` - Quantidade de agendamentos (padrão: 30)
+
+**O comando criará automaticamente:**
+- 🔐 **Administradores** com credenciais de teste
+- 👨‍🏫 **Professores** com perfis completos usando dados do Faker
+- 📚 **5 cursos** diversos com limites de KM variados
 - 🚗 **8 veículos** com diferentes características
-- 📅 **30 agendamentos** com status variados
+- 📅 **Agendamentos** com status variados (pendente, aprovado, reprovado)
 - 🗺️ **Trajetos** associados aos agendamentos aprovados
+- ❓ **Perguntas de segurança** para recuperação de senha
 
 ### 👤 Usuários de Teste
 
@@ -250,68 +333,163 @@ Para facilitar o teste do sistema de recuperação de senha, aqui estão as cred
 
 > ⚠️ **Atenção:** As respostas são **case-sensitive**. Digite exatamente como mostrado acima!
 
-## 🔧 Configuração
+## � Configuração Básica
 
-### Variáveis de Ambiente
+### 🌍 Variáveis de Ambiente
 
-Crie um arquivo `.env` na raiz do projeto (opcional para desenvolvimento):
+Para ambos os ambientes (local e Docker), você pode configurar:
 
 ```env
-# Segurança
-SECRET_KEY=sua-chave-secreta-super-segura-aqui-123456789
+# Arquivo .env (opcional para desenvolvimento local, obrigatório para Docker)
 DEBUG=True
-
-# Hosts permitidos
+SECRET_KEY=sua-chave-secreta-segura
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-# Banco de dados
-DATABASE_URL=sqlite:///db.sqlite3
+# Banco de dados (automático baseado no ambiente)
+DB_ENGINE=sqlite3          # Para desenvolvimento local
+# ou
+DB_ENGINE=postgresql       # Para Docker/Produção
 
-# Fuso horário
-TIME_ZONE=America/Sao_Paulo
+# Localização
 LANGUAGE_CODE=pt-br
+TIME_ZONE=America/Sao_Paulo
 ```
 
-### Configurações Importantes
+### ⚙️ Ambientes Suportados
 
-#### Desenvolvimento
-```python
-DEBUG = True
-./setup.shALLOWED_HOSTS = []
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+| Componente | Desenvolvimento Local | Docker |
+|------------|----------------------|---------|
+| **Python** | Instalação local | Container |
+| **Banco de Dados** | SQLite | PostgreSQL |
+| **Servidor** | runserver | Gunicorn |
+| **Configuração** | .env (opcional) | .env (obrigatório) |
+
+## �🐳 Docker
+
+O projeto oferece suporte completo ao Docker para facilitar o desenvolvimento e deploy. Com Docker, você não precisa instalar Python, PostgreSQL ou outras dependências localmente.
+
+### 🚀 Configuração Rápida
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/HeitorLouzeiro/agendamento_veiculos.git
+cd agendamento_veiculos
+
+# 2. Configure variáveis de ambiente
+cp .env.example .env
+# Edite o .env conforme necessário
+
+# 3. Execute setup automático
+docker-setup.bat  # Windows
+# ou
+./docker-setup.sh  # Linux/Mac
 ```
 
-#### Produção
+### 🎯 Comandos Docker Essenciais
 
-Para ambiente de produção, certifique-se de:
+```bash
+# Construir imagens
+docker-compose build
 
-1. ⚠️ Definir `DEBUG = False`
-2. 🌐 Configurar `ALLOWED_HOSTS` com os domínios permitidos
-3. 🔑 Usar uma `SECRET_KEY` segura e única
-4. 💾 Configurar banco de dados PostgreSQL ou MySQL
-5. 📦 Coletar arquivos estáticos:
-   ```bash
-   python manage.py collectstatic --noinput
-   ```
-6. 🚀 Usar servidor WSGI (Gunicorn):
-   ```bash
-   gunicorn agendamento_veiculos.wsgi:application
-   ```
+# Iniciar em modo desenvolvimento (com live reload)
+docker-compose --profile dev up
 
-### Estrutura de Configuração
+# Iniciar em modo produção
+docker-compose up
 
-| Configuração | Desenvolvimento | Produção |
-|--------------|----------------|----------|
-| **DEBUG** | True | False |
-| **Banco de Dados** | SQLite | PostgreSQL/MySQL |
-| **Servidor** | runserver | Gunicorn + Nginx |
-| **ALLOWED_HOSTS** | [] | ['seu-dominio.com'] |
-| **STATIC_ROOT** | - | /var/www/static/ |
+# Executar em background
+docker-compose up -d
+
+# Parar serviços
+docker-compose down
+
+# Ver logs
+docker-compose logs -f web
+```
+
+### 🔧 Comandos de Desenvolvimento Django
+
+```bash
+# Migrações
+docker-compose run --rm web python manage.py migrate
+docker-compose run --rm web python manage.py makemigrations
+
+# Administração
+docker-compose run --rm web python manage.py createsuperuser
+docker-compose run --rm web python manage.py collectstatic --noinput
+docker-compose run --rm web python manage.py shell
+
+# Dados de exemplo (com parâmetros customizáveis)
+docker-compose run --rm web python manage.py load_sample_data
+docker-compose run --rm web python manage.py load_sample_data --professores 20 --agendamentos 100 --administradores 5
+
+# Testes e debug
+docker-compose run --rm web python manage.py test
+docker-compose logs -f web                 # Ver logs da aplicação
+docker-compose logs -f db                  # Ver logs do banco
+docker-compose exec web bash               # Acessar container web
+docker-compose exec db psql -U postgres -d agendamento_veiculos  # Acessar PostgreSQL
+```
+
+### 📋 Serviços Docker
+
+| Serviço | Descrição | Porta | Ambiente |
+|---------|-----------|-------|----------|
+| **web** | Aplicação Django (Gunicorn) | 8000 | Produção |
+| **web-dev** | Aplicação Django (runserver) | 8000 | Desenvolvimento |
+| **db** | PostgreSQL 15 | 5432 | Ambos |
+
+### 🔒 Variáveis de Ambiente
+
+O arquivo `.env.example` contém todas as configurações necessárias:
+
+```bash
+# Configurações básicas
+DEBUG=True
+SECRET_KEY=sua-chave-secreta
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Banco de dados PostgreSQL
+DB_ENGINE=postgresql
+DB_NAME=agendamento_veiculos
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=localhost  # 'db' no Docker
+DB_PORT=5432
+
+# Localização
+LANGUAGE_CODE=pt-br
+TIME_ZONE=America/Sao_Paulo
+```
+
+### 📊 Backup e Restore
+
+```bash
+# Backup do banco PostgreSQL
+docker-compose exec db pg_dump -U postgres agendamento_veiculos > backup.sql
+
+# Restore do banco
+docker-compose exec -T db psql -U postgres agendamento_veiculos < backup.sql
+```
+
+### 🔍 Troubleshooting Docker
+
+```bash
+# Limpar containers e volumes
+docker-compose down -v
+
+# Reconstruir sem cache
+docker-compose build --no-cache
+
+# Ver status dos containers
+docker-compose ps
+
+# Acessar container em execução
+docker-compose exec web bash
+docker-compose exec db psql -U postgres -d agendamento_veiculos
+```
+
+> 📖 **Documentação Completa:** Veja [DOCKER.md](DOCKER.md) para guia detalhado de uso do Docker.
 
 ## ⚡ Scripts de Automação
 
@@ -355,6 +533,8 @@ O projeto inclui scripts shell para automatizar tarefas comuns de desenvolviment
 
 ## 🏃‍♂️ Comandos Úteis
 
+### 🖥️ Desenvolvimento Local
+
 ```bash
 # Servidor de desenvolvimento
 python manage.py runserver                  # Porta padrão (8000)
@@ -369,14 +549,20 @@ python manage.py migrate                    # Aplicar migrações
 python manage.py createsuperuser           # Criar administrador
 python manage.py collectstatic             # Arquivos estáticos
 python manage.py shell                     # Shell Django
-python manage.py load_sample_data          # Dados de exemplo
+
+# Dados de exemplo com parâmetros
+python manage.py load_sample_data           # Valores padrão
+python manage.py load_sample_data --professores 15 --agendamentos 50 --administradores 5
 
 # Gerenciamento de usuários
 python manage.py changepassword <username>  # Alterar senha de usuário
-python manage.py create_test_users          # Criar usuários de teste
 python manage.py list_users                 # Listar todos os usuários
+```
 
-# Recuperação de senha (via shell)
+### � Comandos Avançados
+
+```bash
+# Recuperação de senha (via shell - funciona tanto local quanto Docker)
 python manage.py shell -c "
 from usuarios.models import Usuario
 user = Usuario.objects.get(email='admin@sistema.com')
@@ -399,10 +585,17 @@ print(f'Pergunta 3: {user.pergunta_seguranca_3}')
 
 ### Acessos
 
+**Desenvolvimento Local:**
 - 🌐 **Sistema Principal**: http://127.0.0.1:8000
 - 🔐 **Login**: http://127.0.0.1:8000/login/
 - 📊 **Dashboard**: http://127.0.0.1:8000/dashboard/
 - ⚙️ **Admin Django**: http://127.0.0.1:8000/admin/
+
+**Docker:**
+- 🌐 **Sistema Principal**: http://localhost:8000
+- 🔐 **Login**: http://localhost:8000/login/
+- 📊 **Dashboard**: http://localhost:8000/dashboard/
+- ⚙️ **Admin Django**: http://localhost:8000/admin/
 
 ### Credenciais de Teste
 
@@ -642,10 +835,37 @@ agendamento_veiculos/
 │
 ├── 📄 manage.py                  # Script de gerenciamento Django
 ├── 📄 requirements.txt           # Dependências do projeto
-├── 📄 load_sample_data.py        # Script para dados de exemplo
-├── 📄 db.sqlite3                 # Banco de dados SQLite
-└── 📄 README.md                  # Este arquivo
+├── 📄 db.sqlite3                 # Banco de dados SQLite (desenvolvimento local)
+├── 📁 static/                    # Arquivos estáticos (CSS, JS, imagens)
+├── 📁 staticfiles/               # Arquivos estáticos coletados (produção/Docker)
+│
+├── 🐳 **Arquivos Docker**
+├── 📄 Dockerfile                 # Configuração da imagem Docker
+├── 📄 docker-compose.yml         # Orquestração dos serviços
+├── 📄 .dockerignore              # Arquivos ignorados pelo Docker
+├── 📄 docker-setup.sh            # Script de configuração (Linux/Mac)
+├── 📄 docker-setup.bat           # Script de configuração (Windows)
+│
+├── 🔧 **Configuração e Documentação**
+├── 📄 .env.example               # Exemplo de variáveis de ambiente
+├── 📄 .gitignore                 # Arquivos ignorados pelo Git
+├── 📄 DOCKER.md                  # Documentação específica do Docker
+├── 📄 SCRIPTS.md                 # Documentação dos scripts de automação
+└── 📄 README.md                  # Documentação principal do projeto
 ```
+
+### 🔄 Ambientes de Execução
+
+O projeto suporta diferentes ambientes com configurações automatizadas:
+
+| Componente | Desenvolvimento Local | Docker |
+|------------|----------------------|---------|
+| **Python** | Instalação local | Container |
+| **Banco de Dados** | SQLite | PostgreSQL |
+| **Servidor** | runserver | Gunicorn |
+| **Arquivos Estáticos** | Desenvolvimento | WhiteNoise |
+| **Variáveis de Ambiente** | .env (opcional) | .env (obrigatório) |
+| **Porta de Acesso** | 127.0.0.1:8000 | localhost:8000 |
 
 ## 🗄️ Modelos de Dados
 
