@@ -4,11 +4,38 @@
 
 {% block content %}
 <div class="container mt-4">
+    <!-- Cabeçalho com Navegação -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-person-lines-fill"></i> Relatório por Professor</h2>
-        <a href="{% url 'agendamentos:relatorio_geral' %}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar aos Relatórios
-        </a>
+        <div class="d-flex gap-2">
+            <div class="btn-group">
+                <a href="{% url 'agendamentos:relatorio_geral' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-bar-chart"></i> Geral
+                </a>
+                <a href="{% url 'agendamentos:relatorio_por_curso' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-book"></i> Por Curso
+                </a>
+                <a href="{% url 'agendamentos:relatorio_por_professor' %}" class="btn btn-primary">
+                    <i class="bi bi-person-lines-fill"></i> Por Professor
+                </a>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" 
+                        {% if not professor_filter %}disabled{% endif %}>
+                    <i class="bi bi-download"></i> Exportar
+                </button>
+                <ul class="dropdown-menu">
+                    {% if professor_filter %}
+                    <li><a class="dropdown-item" href="{% url 'agendamentos:exportar_professor_excel' %}?professor={{ professor_filter }}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        <i class="bi bi-file-earmark-excel text-success"></i> Excel (.xlsx)
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'agendamentos:exportar_professor_pdf' %}?professor={{ professor_filter }}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        <i class="bi bi-file-earmark-pdf text-danger"></i> PDF (.pdf)
+                    </a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
     </div>
 
     <!-- Filtros -->
@@ -81,9 +108,7 @@
                     <p><strong>Username:</strong> {{ professor_selecionado.username }}</p>
                 </div>
                 <div class="col-md-6">
-                    {% if professor_selecionado.curso %}
-                    <p><strong>Curso:</strong> {{ professor_selecionado.curso.nome }}</p>
-                    {% endif %}
+                    <p><strong>Tipo:</strong> {{ professor_selecionado.get_tipo_usuario_display }}</p>
                     <p><strong>Data de Cadastro:</strong> {{ professor_selecionado.date_joined|date:"d/m/Y" }}</p>
                 </div>
             </div>
