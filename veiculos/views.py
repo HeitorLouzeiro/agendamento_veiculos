@@ -1,22 +1,37 @@
+"""
+Views para gerenciamento de veículos.
+
+Este módulo contém views para CRUD de veículos,
+acessível apenas por administradores.
+"""
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import get_object_or_404, redirect, render
+
+from common.constants import VEICULOS_POR_PAGINA
+from common.decorators import is_administrador
+from common.pagination import PaginationHelper
 
 from .forms import VeiculoForm
 from .models import Veiculo
 
 
-def is_administrador(user):
-    """Verifica se o usuário é administrador"""
-    return user.is_administrador()
-
-
 @login_required
 @user_passes_test(is_administrador)
 def lista_veiculos(request):
-    """Lista todos os veículos"""
-    veiculos = Veiculo.objects.all()
-    return render(request, 'veiculos/lista.html', {'veiculos': veiculos})
+    """Lista todos os veículos com paginação"""
+    veiculos = Veiculo.objects.all().order_by('marca', 'modelo', 'placa')
+
+    # Aplicar paginação
+    pagination = PaginationHelper(veiculos, VEICULOS_POR_PAGINA)
+    veiculos_paginados = pagination.get_page(request.GET.get('page'))
+
+    return render(
+        request,
+        'veiculos/lista.html',
+        {'veiculos': veiculos_paginados}
+    )
 
 
 @login_required
@@ -32,7 +47,8 @@ def criar_veiculo(request):
     else:
         form = VeiculoForm()
 
-    return render(request, 'veiculos/form.html', {'form': form, 'titulo': 'Novo Veículo'})
+    context = {'form': form, 'titulo': 'Novo Veículo'}
+    return render(request, 'veiculos/form.html', context)
 
 
 @login_required
@@ -50,7 +66,12 @@ def editar_veiculo(request, pk):
     else:
         form = VeiculoForm(instance=veiculo)
 
-    return render(request, 'veiculos/form.html', {'form': form, 'titulo': 'Editar Veículo', 'veiculo': veiculo})
+    context = {
+        'form': form,
+        'titulo': 'Editar Veículo',
+        'veiculo': veiculo
+    }
+    return render(request, 'veiculos/form.html', context)
 
 
 @login_required
