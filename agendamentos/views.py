@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import Count, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -961,6 +961,123 @@ def exportar_relatorio_pdf(request):
     ]))
     elements.append(stats_table)
     elements.append(Spacer(1, 20))
+
+    # Quilometragem por Curso
+    cursos_km = Curso.objects.filter(
+        agendamentos__in=agendamentos.filter(status='aprovado')
+    ).annotate(
+        total_km=Sum('agendamentos__trajetos__quilometragem')
+    ).order_by('-total_km')[:10]
+
+    if cursos_km.exists():
+        elements.append(Paragraph(
+            '<b>Quilometragem por Curso (Top 10)</b>', styles['Heading2']))
+        elements.append(Spacer(1, 12))
+
+        curso_data = [['Curso', 'Total KM', 'Agendamentos']]
+        for curso in cursos_km:
+            agend_count = agendamentos.filter(
+                curso=curso, status='aprovado').count()
+            nome_curso = (curso.nome[:30] + '...' if len(curso.nome) > 30
+                          else curso.nome)
+            curso_data.append([
+                nome_curso,
+                f'{curso.total_km or 0} km',
+                str(agend_count)
+            ])
+
+        curso_table = Table(curso_data, colWidths=[3*inch, 1*inch, 1*inch])
+        curso_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(curso_table)
+        elements.append(Spacer(1, 20))
+
+    # Agendamentos por Veículo
+    veiculos_stats = Veiculo.objects.filter(
+        agendamentos__in=agendamentos
+    ).annotate(
+        total_agendamentos=models.Count('agendamentos'),
+        total_km=Sum('agendamentos__trajetos__quilometragem',
+                     filter=models.Q(agendamentos__status='aprovado'))
+    ).order_by('-total_agendamentos')[:10]
+
+    if veiculos_stats.exists():
+        elements.append(Paragraph(
+            '<b>Agendamentos por Veículo (Top 10)</b>', styles['Heading2']))
+        elements.append(Spacer(1, 12))
+
+        veiculo_data = [['Veículo', 'Agendamentos', 'KM Total']]
+        for veiculo in veiculos_stats:
+            veiculo_data.append([
+                f'{veiculo.placa} - {veiculo.marca} {veiculo.modelo}',
+                str(veiculo.total_agendamentos),
+                f'{veiculo.total_km or 0} km'
+            ])
+
+        veiculo_table = Table(veiculo_data, colWidths=[3*inch, 1*inch, 1*inch])
+        veiculo_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(veiculo_table)
+        elements.append(Spacer(1, 20))
+
+    # Quilometragem por Professor
+    from usuarios.models import Usuario
+    professores_km = Usuario.objects.filter(
+        tipo_usuario='professor',
+        agendamentos__in=agendamentos.filter(status='aprovado')
+    ).annotate(
+        total_km=Sum('agendamentos__trajetos__quilometragem'),
+        total_agendamentos=models.Count(
+            'agendamentos',
+            filter=models.Q(agendamentos__status='aprovado'))
+    ).order_by('-total_km')[:10]
+
+    if professores_km.exists():
+        elements.append(Paragraph(
+            '<b>Quilometragem por Professor (Top 10)</b>',
+            styles['Heading2']))
+        elements.append(Spacer(1, 12))
+
+        prof_data = [['Professor', 'Total KM', 'Agendamentos']]
+        for professor in professores_km:
+            full_name = professor.get_full_name()
+            nome_prof = (full_name[:25] + '...'
+                         if len(full_name) > 25 else full_name)
+            prof_data.append([
+                nome_prof,
+                f'{professor.total_km or 0} km',
+                str(professor.total_agendamentos)
+            ])
+
+        prof_table = Table(prof_data, colWidths=[3*inch, 1*inch, 1*inch])
+        prof_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(prof_table)
+        elements.append(Spacer(1, 20))
 
     # Tabela de agendamentos
     if agendamentos.exists():
