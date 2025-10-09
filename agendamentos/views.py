@@ -851,6 +851,58 @@ def exportar_relatorio_excel(request):
     stats_worksheet.set_column('B:E', 15)  # Números
     stats_worksheet.set_column('F:F', 15)  # Agendamentos
 
+    # Aba Estatísticas por Professor
+    from usuarios.models import Usuario
+
+    prof_worksheet = workbook.add_worksheet('Estatísticas por Professor')
+    prof_worksheet.merge_range(
+        'A1:H1', f'Estatísticas por Professor - {meses[mes]} {ano}', title_format)
+
+    # Cabeçalhos estatísticas professores
+    prof_headers = ['Professor', 'Email', 'Total KM', 'Agendamentos',
+                    'Aprovados', 'Pendentes', 'Reprovados', 'KM Médio/Agend.']
+    for col, header in enumerate(prof_headers):
+        prof_worksheet.write(2, col, header, header_format)
+
+    # Dados por professor
+    professores = Usuario.objects.filter(
+        tipo_usuario='professor').order_by('first_name', 'last_name')
+
+    row = 3
+    for professor in professores:
+        professor_agendamentos = agendamentos.filter(professor=professor)
+
+        # Calcular total de KM
+        total_km = sum(ag.get_total_km() for ag in professor_agendamentos)
+
+        # Contar agendamentos por status
+        total_agendamentos = professor_agendamentos.count()
+        aprovados = professor_agendamentos.filter(status='aprovado').count()
+        pendentes = professor_agendamentos.filter(status='pendente').count()
+        reprovados = professor_agendamentos.filter(status='reprovado').count()
+
+        # Só incluir professores com agendamentos
+        if total_agendamentos > 0:
+            km_medio = total_km / total_agendamentos if total_agendamentos > 0 else 0
+
+            prof_worksheet.write(
+                row, 0, professor.get_full_name(), cell_format)
+            prof_worksheet.write(row, 1, professor.email, cell_format)
+            prof_worksheet.write(row, 2, total_km, number_format)
+            prof_worksheet.write(row, 3, total_agendamentos, number_format)
+            prof_worksheet.write(row, 4, aprovados, number_format)
+            prof_worksheet.write(row, 5, pendentes, number_format)
+            prof_worksheet.write(row, 6, reprovados, number_format)
+            prof_worksheet.write(row, 7, f"{km_medio:.2f}", cell_format)
+            row += 1
+
+    # Ajustar largura das colunas da aba professores
+    prof_worksheet.set_column('A:A', 30)  # Professor
+    prof_worksheet.set_column('B:B', 30)  # Email
+    prof_worksheet.set_column('C:C', 12)  # Total KM
+    prof_worksheet.set_column('D:G', 12)  # Agendamentos
+    prof_worksheet.set_column('H:H', 15)  # KM Médio
+
     workbook.close()
     output.seek(0)
 
