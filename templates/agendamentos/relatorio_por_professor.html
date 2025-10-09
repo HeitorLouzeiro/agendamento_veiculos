@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatório por Professor - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-person-lines-fill"></i> Relatório por Professor</h2>
+        <a href="{% url 'agendamentos:relatorio_geral' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar aos Relatórios
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="professor" class="form-label">Selecionar Professor</label>
+                    <select name="professor" id="professor" class="form-select" required>
+                        <option value="">Escolha um professor...</option>
+                        {% for prof in professores %}
+                        <option value="{{ prof.id }}" {% if professor_filter == prof.id|stringformat:"s" %}selected{% endif %}>
+                            {{ prof.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="data_inicio" class="form-label">Data Início</label>
+                    <input type="date" 
+                           name="data_inicio" 
+                           id="data_inicio" 
+                           class="form-control"
+                           value="{{ data_inicio_filter|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="data_fim" class="form-label">Data Fim</label>
+                    <input type="date" 
+                           name="data_fim" 
+                           id="data_fim" 
+                           class="form-control"
+                           value="{{ data_fim_filter|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">Todos os Status</option>
+                        {% for key, value in status_choices %}
+                        <option value="{{ key }}" {% if status_filter == key %}selected{% endif %}>
+                            {{ value }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                    <a href="{% url 'agendamentos:relatorio_por_professor' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if professor_selecionado %}
+    <!-- Informações do Professor -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-person-circle"></i> 
+                {{ professor_selecionado.get_full_name }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Email:</strong> {{ professor_selecionado.email }}</p>
+                    <p><strong>Username:</strong> {{ professor_selecionado.username }}</p>
+                </div>
+                <div class="col-md-6">
+                    {% if professor_selecionado.curso %}
+                    <p><strong>Curso:</strong> {{ professor_selecionado.curso.nome }}</p>
+                    {% endif %}
+                    <p><strong>Data de Cadastro:</strong> {{ professor_selecionado.date_joined|date:"d/m/Y" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if estatisticas %}
+    <!-- Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ estatisticas.total_agendamentos }}</h3>
+                    <p class="card-text">Total de Agendamentos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ estatisticas.aprovados }}</h3>
+                    <p class="card-text">Aprovados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ estatisticas.pendentes }}</h3>
+                    <p class="card-text">Pendentes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-info">{{ estatisticas.total_km }}</h3>
+                    <p class="card-text">Total KM</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas Detalhadas -->
+    <div class="row mb-4">
+        <!-- Agendamentos por Curso -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-book"></i> Top 5 Cursos</h6>
+                </div>
+                <div class="card-body">
+                    {% if estatisticas.agendamentos_por_curso %}
+                    <div class="list-group list-group-flush">
+                        {% for item in estatisticas.agendamentos_por_curso %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            {{ item.curso__nome }}
+                            <span class="badge bg-primary rounded-pill">{{ item.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Nenhum curso encontrado.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Veículos Utilizados -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-car-front"></i> Top 5 Veículos</h6>
+                </div>
+                <div class="card-body">
+                    {% if estatisticas.veiculos_utilizados %}
+                    <div class="list-group list-group-flush">
+                        {% for item in estatisticas.veiculos_utilizados %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <strong>{{ item.veiculo__placa }}</strong><br>
+                                <small>{{ item.veiculo__marca }} {{ item.veiculo__modelo }}</small>
+                            </div>
+                            <span class="badge bg-success rounded-pill">{{ item.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Nenhum veículo encontrado.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Lista de Agendamentos -->
+    {% if agendamentos.object_list %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-calendar3"></i> 
+                Agendamentos ({{ agendamentos.paginator.count }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Data/Período</th>
+                            <th>Curso</th>
+                            <th>Veículo</th>
+                            <th>Total KM</th>
+                            <th>Status</th>
+                            <th>Criado em</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for agendamento in agendamentos %}
+                        <tr>
+                            <td>
+                                <small>
+                                    {{ agendamento.data_inicio|date:"d/m/Y" }} 
+                                    {% if agendamento.data_fim != agendamento.data_inicio %}
+                                    - {{ agendamento.data_fim|date:"d/m/Y" }}
+                                    {% endif %}
+                                    <br>
+                                    {{ agendamento.hora_inicio }} - {{ agendamento.hora_fim }}
+                                </small>
+                            </td>
+                            <td>{{ agendamento.curso.nome }}</td>
+                            <td>
+                                <small>
+                                    <strong>{{ agendamento.veiculo.placa }}</strong><br>
+                                    {{ agendamento.veiculo.marca }} {{ agendamento.veiculo.modelo }}
+                                </small>
+                            </td>
+                            <td>{{ agendamento.get_total_km }} km</td>
+                            <td>
+                                <span class="badge status-badge status-{{ agendamento.status }}">
+                                    {{ agendamento.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <small>{{ agendamento.criado_em|date:"d/m/Y H:i" }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'agendamentos:detalhe' agendamento.pk %}" 
+                                   class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginação -->
+            {% if agendamentos.has_other_pages %}
+            <nav aria-label="Paginação dos agendamentos">
+                <ul class="pagination justify-content-center">
+                    {% if agendamentos.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ agendamentos.previous_page_number }}{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in agendamentos.paginator.page_range %}
+                    {% if agendamentos.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > agendamentos.number|add:'-3' and num < agendamentos.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if agendamentos.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ agendamentos.next_page_number }}{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ agendamentos.paginator.num_pages }}{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    {% if professor_selecionado %}
+    <div class="alert alert-info text-center">
+        <i class="bi bi-info-circle"></i> 
+        Nenhum agendamento encontrado para os filtros selecionados.
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% else %}
+    <div class="alert alert-info text-center">
+        <i class="bi bi-person-plus"></i> 
+        Selecione um professor para visualizar o relatório.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

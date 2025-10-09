@@ -14,6 +14,9 @@
                 <a href="{% url 'agendamentos:relatorio_por_curso' %}" class="btn btn-outline-primary">
                     <i class="bi bi-book"></i> Por Curso
                 </a>
+                <a href="{% url 'agendamentos:relatorio_por_professor' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-person-lines-fill"></i> Por Professor
+                </a>
             </div>
             <div class="btn-group">
                 <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
@@ -293,7 +296,7 @@
         <div class="col-md-6">
             <div class="card" id="professores-section">
                 <div class="card-header">
-                    <h5><i class="bi bi-person"></i> Agendamentos por Professor</h5>
+                    <h5><i class="bi bi-speedometer2"></i> Relatório de Quilometragem por Professor</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -301,18 +304,44 @@
                             <thead>
                                 <tr>
                                     <th>Professor</th>
-                                    <th>Agendamentos</th>
+                                    <th>Total KM</th>
+                                    <th>Total</th>
+                                    <th>Pendentes</th>
+                                    <th>Aprovados</th>
+                                    <th>Reprovados</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for professor in professores_stats %}
                                 <tr>
                                     <td>{{ professor.professor__first_name }} {{ professor.professor__last_name }}</td>
+                                    <td><span class="badge bg-info">{{ professor.total_km }} km</span></td>
                                     <td><span class="badge bg-primary">{{ professor.total_agendamentos }}</span></td>
+                                    <td>
+                                        {% if professor.pendentes > 0 %}
+                                        <span class="badge bg-warning">{{ professor.pendentes }}</span>
+                                        {% else %}
+                                        <span class="text-muted">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if professor.aprovados > 0 %}
+                                        <span class="badge bg-success">{{ professor.aprovados }}</span>
+                                        {% else %}
+                                        <span class="text-muted">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if professor.reprovados > 0 %}
+                                        <span class="badge bg-danger">{{ professor.reprovados }}</span>
+                                        {% else %}
+                                        <span class="text-muted">0</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="2" class="text-center text-muted">Nenhum professor encontrado</td>
+                                    <td colspan="6" class="text-center text-muted">Nenhum professor encontrado</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
