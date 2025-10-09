@@ -1394,3 +1394,309 @@ def relatorio_por_professor(request):
     }
 
     return render(request, 'agendamentos/relatorio_por_professor.html', context)
+
+
+@login_required
+@user_passes_test(is_administrador)
+def exportar_professor_excel(request):
+    """Exporta relatório por professor em Excel"""
+    from usuarios.models import Usuario
+
+    professor_id = request.GET.get('professor')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    status_filtro = request.GET.get('status')
+
+    if not professor_id:
+        messages.error(request, 'Selecione um professor para exportar.')
+        return redirect('agendamentos:relatorio_por_professor')
+
+    professor = get_object_or_404(
+        Usuario, id=professor_id, tipo_usuario='professor')
+
+    # Filtrar agendamentos
+    agendamentos = Agendamento.objects.filter(professor=professor)
+
+    if data_inicio:
+        agendamentos = agendamentos.filter(data_inicio__gte=data_inicio)
+    if data_fim:
+        agendamentos = agendamentos.filter(data_fim__lte=data_fim)
+    if status_filtro:
+        agendamentos = agendamentos.filter(status=status_filtro)
+
+    agendamentos = agendamentos.order_by('-data_inicio')
+
+    # Criar arquivo Excel
+    output = io.BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+
+    # Formatos
+    title_format = workbook.add_format({
+        'bold': True,
+        'font_size': 16,
+        'align': 'center',
+        'valign': 'vcenter'
+    })
+
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#4472C4',
+        'font_color': 'white',
+        'align': 'center',
+        'border': 1
+    })
+
+    cell_format = workbook.add_format({
+        'border': 1,
+        'align': 'left'
+    })
+
+    number_format = workbook.add_format({
+        'border': 1,
+        'align': 'right',
+        'num_format': '#,##0'
+    })
+
+    # Aba Principal - Agendamentos
+    worksheet = workbook.add_worksheet('Agendamentos')
+
+    # Título
+    titulo = f'Relatório de Agendamentos - Professor: {professor.get_full_name()}'
+    worksheet.merge_range('A1:H1', titulo, title_format)
+
+    # Informações do professor
+    worksheet.write('A3', 'Email:', header_format)
+    worksheet.write('B3', professor.email, cell_format)
+
+    # Cabeçalhos dos agendamentos
+    headers = ['Data Início', 'Data Fim', 'Curso', 'Veículo',
+               'Status', 'KM Total', 'Destino', 'Observações']
+    for col, header in enumerate(headers):
+        worksheet.write(5, col, header, header_format)
+
+    # Dados
+    row = 6
+    for agendamento in agendamentos:
+        worksheet.write(row, 0, agendamento.data_inicio.strftime(
+            '%d/%m/%Y %H:%M'), cell_format)
+        worksheet.write(row, 1, agendamento.data_fim.strftime(
+            '%d/%m/%Y %H:%M'), cell_format)
+        worksheet.write(row, 2, agendamento.curso.nome, cell_format)
+        worksheet.write(
+            row, 3, f"{agendamento.veiculo.placa} - {agendamento.veiculo.marca} {agendamento.veiculo.modelo}", cell_format)
+        worksheet.write(row, 4, agendamento.get_status_display(), cell_format)
+        worksheet.write(row, 5, agendamento.get_total_km(), number_format)
+
+        # Destinos dos trajetos
+        trajetos = agendamento.trajetos.all()
+        destinos = ', '.join([t.destino for t in trajetos])
+        worksheet.write(row, 6, destinos, cell_format)
+
+        worksheet.write(row, 7, agendamento.observacoes or '', cell_format)
+        row += 1
+
+    # Ajustar largura das colunas
+    worksheet.set_column('A:B', 15)
+    worksheet.set_column('C:C', 20)
+    worksheet.set_column('D:D', 25)
+    worksheet.set_column('E:E', 12)
+    worksheet.set_column('F:F', 10)
+    worksheet.set_column('G:G', 30)
+    worksheet.set_column('H:H', 30)
+
+    # Aba de Estatísticas
+    stats_worksheet = workbook.add_worksheet('Estatísticas')
+    stats_worksheet.merge_range(
+        'A1:B1', f'Estatísticas - {professor.get_full_name()}', title_format)
+
+    # Calcular estatísticas
+    total_agendamentos = agendamentos.count()
+    total_km = sum(a.get_total_km() for a in agendamentos)
+    aprovados = agendamentos.filter(status='aprovado').count()
+    pendentes = agendamentos.filter(status='pendente').count()
+    reprovados = agendamentos.filter(status='reprovado').count()
+
+    stats_data = [
+        ['Total de Agendamentos', total_agendamentos],
+        ['Total de KM', total_km],
+        ['Agendamentos Aprovados', aprovados],
+        ['Agendamentos Pendentes', pendentes],
+        ['Agendamentos Reprovados', reprovados],
+        ['KM Médio por Agendamento',
+            f"{total_km / total_agendamentos:.2f}" if total_agendamentos > 0 else "0"],
+    ]
+
+    row = 3
+    for label, value in stats_data:
+        stats_worksheet.write(row, 0, label, header_format)
+        stats_worksheet.write(row, 1, value, cell_format)
+        row += 1
+
+    stats_worksheet.set_column('A:A', 30)
+    stats_worksheet.set_column('B:B', 20)
+
+    workbook.close()
+    output.seek(0)
+
+    # Resposta HTTP
+    filename = f'relatorio_professor_{professor.get_full_name().lower().replace(" ", "_")}.xlsx'
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    return response
+
+
+@login_required
+@user_passes_test(is_administrador)
+def exportar_professor_pdf(request):
+    """Exporta relatório por professor em PDF"""
+    from usuarios.models import Usuario
+
+    professor_id = request.GET.get('professor')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    status_filtro = request.GET.get('status')
+
+    if not professor_id:
+        messages.error(request, 'Selecione um professor para exportar.')
+        return redirect('agendamentos:relatorio_por_professor')
+
+    professor = get_object_or_404(
+        Usuario, id=professor_id, tipo_usuario='professor')
+
+    # Filtrar agendamentos
+    agendamentos = Agendamento.objects.filter(professor=professor)
+
+    if data_inicio:
+        agendamentos = agendamentos.filter(data_inicio__gte=data_inicio)
+    if data_fim:
+        agendamentos = agendamentos.filter(data_fim__lte=data_fim)
+    if status_filtro:
+        agendamentos = agendamentos.filter(status=status_filtro)
+
+    agendamentos = agendamentos.order_by('-data_inicio')
+
+    # Criar PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+
+    # Estilos
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        textColor=colors.HexColor('#1f4788'),
+        spaceAfter=30,
+        alignment=1
+    )
+
+    # Título
+    title = Paragraph(
+        f'Relatório de Agendamentos<br/>Professor: {professor.get_full_name()}', title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 12))
+
+    # Informações do professor
+    info_data = [
+        ['Email:', professor.email],
+    ]
+
+    info_table = Table(info_data, colWidths=[100, 400])
+    info_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#4472C4')),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 20))
+
+    # Estatísticas
+    total_agendamentos = agendamentos.count()
+    total_km = sum(a.get_total_km() for a in agendamentos)
+    aprovados = agendamentos.filter(status='aprovado').count()
+    pendentes = agendamentos.filter(status='pendente').count()
+    reprovados = agendamentos.filter(status='reprovado').count()
+
+    stats_title = Paragraph('<b>Estatísticas</b>', styles['Heading2'])
+    elements.append(stats_title)
+    elements.append(Spacer(1, 12))
+
+    stats_data = [
+        ['Métrica', 'Valor'],
+        ['Total de Agendamentos', str(total_agendamentos)],
+        ['Total de KM', f"{total_km} km"],
+        ['Agendamentos Aprovados', str(aprovados)],
+        ['Agendamentos Pendentes', str(pendentes)],
+        ['Agendamentos Reprovados', str(reprovados)],
+    ]
+
+    stats_table = Table(stats_data, colWidths=[250, 250])
+    stats_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4472C4')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(stats_table)
+    elements.append(Spacer(1, 20))
+
+    # Lista de agendamentos
+    if agendamentos.exists():
+        agend_title = Paragraph('<b>Agendamentos</b>', styles['Heading2'])
+        elements.append(agend_title)
+        elements.append(Spacer(1, 12))
+
+        agend_data = [['Data', 'Curso', 'Veículo', 'Status', 'KM']]
+
+        # Limitar a 20 para não ficar muito grande
+        for agendamento in agendamentos[:20]:
+            agend_data.append([
+                agendamento.data_inicio.strftime('%d/%m/%Y'),
+                agendamento.curso.nome[:15],
+                f"{agendamento.veiculo.placa}",
+                agendamento.get_status_display(),
+                str(agendamento.get_total_km())
+            ])
+
+        agend_table = Table(agend_data, colWidths=[80, 120, 80, 80, 60])
+        agend_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4472C4')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(agend_table)
+
+        if agendamentos.count() > 20:
+            nota = Paragraph(
+                f'<i>Mostrando os 20 primeiros agendamentos de {agendamentos.count()} no total.</i>', styles['Normal'])
+            elements.append(Spacer(1, 12))
+            elements.append(nota)
+
+    # Construir PDF
+    doc.build(elements)
+    buffer.seek(0)
+
+    # Resposta HTTP
+    filename = f'relatorio_professor_{professor.get_full_name().lower().replace(" ", "_")}.pdf'
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    return response

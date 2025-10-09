@@ -29,4 +29,8 @@ urlpatterns = [
          views.exportar_relatorio_pdf, name='exportar_pdf'),
     path('relatorios/curso/exportar/excel/',
          views.exportar_curso_excel, name='exportar_curso_excel'),
+    path('relatorios/professor/exportar/excel/',
+         views.exportar_professor_excel, name='exportar_professor_excel'),
+    path('relatorios/professor/exportar/pdf/',
+         views.exportar_professor_pdf, name='exportar_professor_pdf'),
 ]
