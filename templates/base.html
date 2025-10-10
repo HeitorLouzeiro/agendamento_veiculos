@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Sistema de Agendamento de Veículos{% endblock %}</title>
     
+    <!-- Favicon -->
+    {% load static %}
+    <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
+    
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -25,6 +29,11 @@
         }
         .navbar-brand {
             font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+        .navbar-brand img {
+            margin-right: 0.5rem;
         }
         .status-badge {
             font-size: 0.85rem;
@@ -49,7 +58,9 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'dashboard' %}">
-                <i class="bi bi-car-front-fill"></i> Agendamento de Veículos
+                {% load static %}
+                <img src="{% static 'images/logo.png' %}" alt="UESPI" height="30" class="d-inline-block align-text-top me-2">
+                Agendamento de Veículos
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -162,7 +173,7 @@
     <!-- Footer -->
     <footer class="bg-light text-center text-muted py-3 mt-5">
         <div class="container">
-            <p class="mb-0">&copy; 2025 Sistema de Agendamento de Veículos</p>
+            <p class="mb-0">&copy; {% now "Y" %} Sistema de Agendamento de Veículos</p>
         </div>
     </footer>
 
