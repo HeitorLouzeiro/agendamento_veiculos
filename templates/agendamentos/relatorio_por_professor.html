@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load pagination_tags %}
 
 {% block title %}Relatório por Professor - Sistema de Agendamento{% endblock %}
 
@@ -270,49 +271,7 @@
             </div>
 
             <!-- Paginação -->
-            {% if agendamentos.has_other_pages %}
-            <nav aria-label="Paginação dos agendamentos">
-                <ul class="pagination justify-content-center">
-                    {% if agendamentos.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
-                            <i class="bi bi-chevron-double-left"></i>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ agendamentos.previous_page_number }}{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
-                            <i class="bi bi-chevron-left"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-
-                    {% for num in agendamentos.paginator.page_range %}
-                    {% if agendamentos.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                    {% elif num > agendamentos.number|add:'-3' and num < agendamentos.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
-                    </li>
-                    {% endif %}
-                    {% endfor %}
-
-                    {% if agendamentos.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ agendamentos.next_page_number }}{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ agendamentos.paginator.num_pages }}{% if professor_filter %}&professor={{ professor_filter }}{% endif %}{% if data_inicio_filter %}&data_inicio={{ data_inicio_filter }}{% endif %}{% if data_fim_filter %}&data_fim={{ data_fim_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
-                            <i class="bi bi-chevron-double-right"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
+            {% render_pagination agendamentos professor=professor_filter data_inicio=data_inicio_filter data_fim=data_fim_filter status=status_filter %}
         </div>
     </div>
     {% else %}

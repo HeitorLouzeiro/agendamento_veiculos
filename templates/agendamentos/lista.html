@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load pagination_tags %}
 
 {% block title %}
     {% if user.is_administrador %}
@@ -172,60 +173,7 @@
     </div>
     
     <!-- Paginação -->
-    {% if agendamentos.has_other_pages %}
-    <nav aria-label="Navegação da paginação">
-        <ul class="pagination justify-content-center">
-            {% if agendamentos.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}{% if curso_filter %}&curso={{ curso_filter }}{% endif %}" aria-label="Primeira">
-                        <span aria-hidden="true">&laquo;&laquo;</span>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ agendamentos.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if curso_filter %}&curso={{ curso_filter }}{% endif %}" aria-label="Anterior">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-            {% endif %}
-            
-            {% for num in agendamentos.paginator.page_range %}
-                {% if agendamentos.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                {% elif num > agendamentos.number|add:'-3' and num < agendamentos.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if curso_filter %}&curso={{ curso_filter }}{% endif %}">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-            
-            {% if agendamentos.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ agendamentos.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if curso_filter %}&curso={{ curso_filter }}{% endif %}" aria-label="Próxima">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ agendamentos.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if curso_filter %}&curso={{ curso_filter }}{% endif %}" aria-label="Última">
-                        <span aria-hidden="true">&raquo;&raquo;</span>
-                    </a>
-                </li>
-            {% endif %}
-        </ul>
-    </nav>
-    
-    <!-- Informações da paginação -->
-    <div class="d-flex justify-content-between align-items-center mt-3">
-        <small class="text-muted">
-            Mostrando {{ agendamentos.start_index }} a {{ agendamentos.end_index }} 
-            de {{ agendamentos.paginator.count }} agendamentos
-        </small>
-        <small class="text-muted">
-            Página {{ agendamentos.number }} de {{ agendamentos.paginator.num_pages }}
-        </small>
-    </div>
-    {% endif %}
+    {% render_pagination agendamentos status=status_filter curso=curso_filter professor=professor_filter %}
     
     {% else %}
     <div class="alert alert-info">

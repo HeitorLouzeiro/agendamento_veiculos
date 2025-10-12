@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load pagination_tags %}
 
 {% block title %}Relatório por Curso - Sistema de Agendamento{% endblock %}
 
@@ -266,60 +267,7 @@
             </div>
             
             <!-- Paginação -->
-            {% if agendamentos_ano.has_other_pages %}
-            <nav aria-label="Navegação da paginação" class="mt-3">
-                <ul class="pagination justify-content-center">
-                    {% if agendamentos_ano.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1&curso={{ curso.id }}&ano={{ ano }}" aria-label="Primeira">
-                                <span aria-hidden="true">&laquo;&laquo;</span>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ agendamentos_ano.previous_page_number }}&curso={{ curso.id }}&ano={{ ano }}" aria-label="Anterior">
-                                <span aria-hidden="true">&laquo;</span>
-                            </a>
-                        </li>
-                    {% endif %}
-                    
-                    {% for num in agendamentos_ano.paginator.page_range %}
-                        {% if agendamentos_ano.number == num %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
-                        {% elif num > agendamentos_ano.number|add:'-3' and num < agendamentos_ano.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}&curso={{ curso.id }}&ano={{ ano }}">{{ num }}</a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if agendamentos_ano.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ agendamentos_ano.next_page_number }}&curso={{ curso.id }}&ano={{ ano }}" aria-label="Próxima">
-                                <span aria-hidden="true">&raquo;</span>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ agendamentos_ano.paginator.num_pages }}&curso={{ curso.id }}&ano={{ ano }}" aria-label="Última">
-                                <span aria-hidden="true">&raquo;&raquo;</span>
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            
-            <!-- Informações da paginação -->
-            <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
-                <small class="text-muted">
-                    Mostrando {{ agendamentos_ano.start_index }} a {{ agendamentos_ano.end_index }} 
-                    de {{ agendamentos_ano.paginator.count }} agendamentos
-                </small>
-                <small class="text-muted">
-                    Página {{ agendamentos_ano.number }} de {{ agendamentos_ano.paginator.num_pages }}
-                </small>
-            </div>
-            {% endif %}
+            {% render_pagination agendamentos_ano curso=curso.id ano=ano %}
             
             {% else %}
             <div class="text-center py-4">
