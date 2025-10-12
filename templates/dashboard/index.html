@@ -4,8 +4,59 @@
 
 {% block extra_css %}
 <style>
+    /* Status badges */
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+        border-radius: 0.375rem;
+    }
+    
+    .status-pendente {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .status-aprovado {
+        background-color: #d1edff;
+        color: #0c63e4;
+        border: 1px solid #a7e3ff;
+    }
+    
+    .status-reprovado {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f1aeb5;
+    }
+
+    /* Cards de agendamento */
+    .card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    }
+
+    /* Paginação customizada */
+    .pagination-sm .page-link {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
     /* Ajustes para dispositivos móveis */
-    @media (max-width: 768px) {
+    @media (max-width: 767.98px) {
+        /* Cards de agendamentos visíveis apenas em mobile */
+        .d-md-none {
+            display: block !important;
+        }
+        
         /* Empilha os botões do calendário verticalmente */
         .fc .fc-toolbar {
             display: flex;
@@ -55,6 +106,18 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+        }
+    }
+
+    /* Tablets e Desktop - esconde os cards */
+    @media (min-width: 768px) {
+        .d-md-none {
+            display: none !important;
+        }
+        
+        .legend-mobile {
+            display: flex;
+            gap: 15px;
         }
     }
     
@@ -115,6 +178,160 @@
             </div>
         </div>
     </div>
+
+    <!-- Cards dos Agendamentos Recentes - Apenas Mobile -->
+    {% if agendamentos_recentes %}
+    <div class="row mt-4 d-md-none">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-clock-history"></i> Agendamentos - {{ nome_mes }}
+                        <small class="text-muted">({{ agendamentos_recentes.paginator.count }} no mês)</small>
+                    </h5>
+                    
+                    {% if agendamentos_recentes %}
+                    <div class="row">
+                        {% for agendamento in agendamentos_recentes %}
+                        <div class="col-12 mb-3">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar3"></i>
+                                        {{ agendamento.data_inicio|date:"d/m/Y H:i" }}
+                                    </small>
+                                    <span class="badge status-badge status-{{ agendamento.status }}">
+                                        {{ agendamento.get_status_display }}
+                                    </span>
+                                </div>
+                                <div class="card-body py-2">
+                                    <h6 class="card-title mb-2">
+                                        <i class="bi bi-book"></i>
+                                        {{ agendamento.curso.nome }}
+                                    </h6>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-person"></i>
+                                            <strong>Professor:</strong>
+                                        </small>
+                                        <br>
+                                        <small>{{ agendamento.professor.get_full_name|default:agendamento.professor.username }}</small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-truck"></i>
+                                            <strong>Veículo:</strong>
+                                        </small>
+                                        <br>
+                                        <small>{{ agendamento.veiculo.modelo }} - {{ agendamento.veiculo.placa }}</small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock"></i>
+                                            <strong>Período:</strong>
+                                        </small>
+                                        <br>
+                                        <small>{{ agendamento.data_inicio|date:"H:i" }} - {{ agendamento.data_fim|date:"H:i" }}</small>
+                                    </div>
+                                    {% if agendamento.observacoes %}
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-chat-text"></i>
+                                            <strong>Observações:</strong>
+                                        </small>
+                                        <br>
+                                        <small>{{ agendamento.observacoes|truncatechars:50 }}</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if user.is_authenticated %}
+                                <div class="card-footer bg-transparent border-0 py-2">
+                                    <a href="{% url 'agendamentos:detalhe' agendamento.id %}" 
+                                       class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="bi bi-eye"></i> Ver Detalhes
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-calendar-x display-4 text-muted"></i>
+                        <p class="text-muted mt-3 mb-0">
+                            Nenhum agendamento encontrado para <strong>{{ nome_mes }}</strong>
+                        </p>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'agendamentos:criar' %}" class="btn btn-primary btn-sm mt-2">
+                            <i class="bi bi-plus-circle"></i> Criar Agendamento
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Paginação -->
+                    {% if agendamentos_recentes.has_other_pages %}
+                    <nav aria-label="Paginação dos agendamentos" class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-center">
+                            {% if agendamentos_recentes.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1&mes={{ mes_atual }}&ano={{ ano_atual }}" aria-label="Primeira">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ agendamentos_recentes.previous_page_number }}&mes={{ mes_atual }}&ano={{ ano_atual }}" aria-label="Anterior">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in agendamentos_recentes.paginator.page_range %}
+                                {% if agendamentos_recentes.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > agendamentos_recentes.number|add:'-3' and num < agendamentos_recentes.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}&mes={{ mes_atual }}&ano={{ ano_atual }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if agendamentos_recentes.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ agendamentos_recentes.next_page_number }}&mes={{ mes_atual }}&ano={{ ano_atual }}" aria-label="Próxima">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ agendamentos_recentes.paginator.num_pages }}&mes={{ mes_atual }}&ano={{ ano_atual }}" aria-label="Última">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    
+                    <div class="text-center text-muted small">
+                        Página {{ agendamentos_recentes.number }} de {{ agendamentos_recentes.paginator.num_pages }}
+                        ({{ agendamentos_recentes.start_index }} - {{ agendamentos_recentes.end_index }} de {{ agendamentos_recentes.paginator.count }} agendamentos)
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.is_authenticated %}
+                    <div class="text-center mt-3">
+                        <a href="{% url 'agendamentos:lista' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-list"></i> Ver Todos os Agendamentos
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Toast Container -->
@@ -141,6 +358,24 @@
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
     
+    // Função para atualizar os cards baseado na data do calendário
+    function atualizarCards(mes, ano) {
+        // Verifica se é mobile (onde os cards são visíveis)
+        if (window.innerWidth < 768) {
+            var params = new URLSearchParams(window.location.search);
+            params.set('mes', mes);
+            params.set('ano', ano);
+            params.delete('page'); // Remove paginação ao mudar mês
+            
+            // Atualiza a URL sem recarregar a página
+            var novaUrl = window.location.pathname + '?' + params.toString();
+            history.pushState(null, '', novaUrl);
+            
+            // Recarrega a página para atualizar os cards
+            window.location.reload();
+        }
+    }
+    
     var calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'pt-br',
         initialView: 'dayGridMonth',
@@ -160,6 +395,22 @@ document.addEventListener('DOMContentLoaded', function() {
         editable: false,
         dayMaxEvents: true,
         events: '{% url "agendamentos:json" %}',
+        
+        // Callback quando a data do calendário muda
+        datesSet: function(info) {
+            var dataAtual = info.view.currentStart;
+            var mes = dataAtual.getMonth() + 1; // JavaScript months são 0-based
+            var ano = dataAtual.getFullYear();
+            
+            // Atualiza cards apenas se mudou o mês/ano
+            var mesAtual = {{ mes_atual }};
+            var anoAtual = {{ ano_atual }};
+            
+            if (mes !== mesAtual || ano !== anoAtual) {
+                atualizarCards(mes, ano);
+            }
+        },
+        
         eventClick: function(info) {
             info.jsEvent.preventDefault();
             {% if user.is_authenticated %}
@@ -198,6 +449,11 @@ document.addEventListener('DOMContentLoaded', function() {
             {% endif %}
         }
     });
+    
+    // Definir data inicial do calendário baseada nos parâmetros
+    {% if mes_atual and ano_atual %}
+        calendar.gotoDate('{{ ano_atual }}-{{ mes_atual|stringformat:"02d" }}-01');
+    {% endif %}
     
     calendar.render();
 });
