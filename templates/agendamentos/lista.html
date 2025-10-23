@@ -1,24 +1,13 @@
 {% extends 'base.html' %}
 {% load pagination_tags %}
 
-{% block title %}
-    {% if user.is_administrador %}
-        Todos os Agendamentos - Sistema de Agendamento
-    {% else %}
-        Meus Agendamentos - Sistema de Agendamento
-    {% endif %}
-{% endblock %}
+{% block title %}Meus Agendamentos - Sistema de Agendamento{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>
-            <i class="bi bi-list-ul"></i> 
-            {% if user.is_administrador %}
-                Todos os Agendamentos
-            {% else %}
-                Meus Agendamentos
-            {% endif %}
+            <i class="bi bi-list-ul"></i> Meus Agendamentos
         </h2>
         <a href="{% url 'agendamentos:criar' %}" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i> Novo Agendamento
@@ -47,14 +36,6 @@
                         {% endfor %}
                     </select>
                 </div>
-                {% if user.is_administrador %}
-                <div class="col-md-3">
-                    <label class="form-label">Professor</label>
-                    <input type="text" name="professor" class="form-control" 
-                           placeholder="Nome, email ou usuário..." 
-                           value="{{ professor_filter|default:'' }}">
-                </div>
-                {% endif %}
                 <div class="col-md-3">
                     <label class="form-label">&nbsp;</label>
                     <div>
@@ -84,9 +65,6 @@
                     </div>
                     
                     <p class="card-text">
-                        {% if user.is_administrador %}
-                            Professor: <i class="bi bi-person"></i> <strong>{{ agendamento.professor.get_full_name|default:agendamento.professor.username }}</strong><br>
-                        {% endif %}
                         <i class="bi bi-car-front"></i> <strong>{{ agendamento.veiculo.placa }}</strong><br>
                         <i class="bi bi-calendar-event"></i> {{ agendamento.data_inicio|date:"d/m/Y H:i" }}<br>
                         <i class="bi bi-calendar-check"></i> {{ agendamento.data_fim|date:"d/m/Y H:i" }}<br>
@@ -134,14 +112,6 @@
                         </div>
                         {% endif %}
                     </div>
-                    {% endif %}
-                    
-                    {% if not user.is_administrador %}
-                    <p class="card-text">
-                        <small class="text-muted">
-                            <i class="bi bi-person"></i> {{ agendamento.professor.get_full_name }}
-                        </small>
-                    </p>
                     {% endif %}
                     
                     {% if agendamento.status == 'reprovado' and agendamento.motivo_reprovacao %}
