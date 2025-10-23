@@ -16,8 +16,16 @@ class AgendamentoForm(forms.ModelForm):
         model = Agendamento
         fields = ['curso', 'veiculo', 'data_inicio', 'data_fim', 'observacoes']
         widgets = {
-            'curso': forms.Select(attrs={'class': 'form-select'}),
-            'veiculo': forms.Select(attrs={'class': 'form-select'}),
+            'curso': forms.Select(attrs={
+                'class': 'form-select select2-curso',
+                'data-placeholder': 'Selecione ou digite o nome do curso'
+            }),
+            'veiculo': forms.Select(attrs={
+                'class': 'form-select select2-veiculo',
+                'data-placeholder': (
+                    'Selecione ou digite a placa/modelo do veículo'
+                )
+            }),
             'data_inicio': forms.DateTimeInput(attrs={
                 'class': 'form-control',
                 'type': 'datetime-local'

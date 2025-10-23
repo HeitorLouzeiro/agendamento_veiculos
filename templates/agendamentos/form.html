@@ -2,6 +2,17 @@
 
 {% block title %}{{ titulo }} - Sistema de Agendamento{% endblock %}
 
+{% block extra_css %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<style>
+    .select2-container--bootstrap-5 .select2-selection {
+        min-height: 38px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="card">
@@ -160,8 +171,46 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/pt-BR.js"></script>
 <script>
 $(document).ready(function() {
+    // Inicializar Select2 para Curso
+    $('.select2-curso').select2({
+        theme: 'bootstrap-5',
+        language: 'pt-BR',
+        placeholder: 'Selecione ou digite o nome do curso',
+        allowClear: true,
+        width: '100%'
+    });
+    
+    // Inicializar Select2 para Veículo
+    $('.select2-veiculo').select2({
+        theme: 'bootstrap-5',
+        language: 'pt-BR',
+        placeholder: 'Selecione ou digite a placa/modelo do veículo',
+        allowClear: true,
+        width: '100%',
+        // Personalizar como o texto é exibido na busca
+        templateResult: formatVeiculo,
+        templateSelection: formatVeiculoSelection
+    });
+    
+    // Função para formatar a exibição do veículo na lista de resultados
+    function formatVeiculo(veiculo) {
+        if (!veiculo.id) {
+            return veiculo.text;
+        }
+        // O texto já vem formatado do Django como "PLACA - MARCA MODELO"
+        return veiculo.text;
+    }
+    
+    // Função para formatar a exibição do veículo quando selecionado
+    function formatVeiculoSelection(veiculo) {
+        return veiculo.text || veiculo.id;
+    }
+
     // Gerenciamento de formset inline
     let trajetoIndex = {{ formset.total_form_count }};
     
