@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils.crypto import get_random_string
 
 
 class Usuario(AbstractUser):
@@ -32,6 +33,18 @@ class Usuario(AbstractUser):
         max_length=20,
         blank=True,
         verbose_name='Telefone'
+    )
+    
+    # Token de ativação de conta (usa is_active do Django)
+    token_ativacao = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Token de Ativação'
+    )
+    token_criado_em = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Token Criado Em'
     )
 
     # Perguntas de segurança para recuperação de senha
@@ -71,3 +84,10 @@ class Usuario(AbstractUser):
     def is_professor(self):
         """Verifica se o usuário é professor"""
         return self.tipo_usuario == 'professor'
+    
+    def gerar_token_ativacao(self):
+        """Gera um novo token de ativação de conta"""
+        from django.utils import timezone
+        self.token_ativacao = get_random_string(64)
+        self.token_criado_em = timezone.now()
+        return self.token_ativacao

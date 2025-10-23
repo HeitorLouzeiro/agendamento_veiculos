@@ -1,8 +1,12 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView, LogoutView
+from django.core.mail import send_mail
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.utils import timezone
 
 from .forms import (PERGUNTAS_SEGURANCA, AlterarSenhaForm, EditarPerfilForm,
                     RecuperarSenhaStep1Form, RecuperarSenhaStep2Form,
@@ -24,6 +28,40 @@ class CustomLoginView(LoginView):
         if username:
             form.cleaned_data['username'] = username.lower()
         return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        """Verifica se o usuário existe mas está inativo"""
+        username = self.request.POST.get('username', '').lower()
+        password = self.request.POST.get('password', '')
+        
+        if username and password:
+            try:
+                # Busca por username ou email
+                usuario = Usuario.objects.get(
+                    Q(username=username) | Q(email__iexact=username)
+                )
+                
+                # Verifica se a senha está correta e o usuário inativo
+                if usuario.check_password(password) and not usuario.is_active:
+                    messages.error(
+                        self.request,
+                        'Sua conta ainda não foi ativada. '
+                        'Por favor, verifique seu e-mail e clique no link '
+                        'de ativação enviado para você. '
+                        'Se não recebeu o e-mail, '
+                        '<a href="/usuarios/reenviar-ativacao/" '
+                        'class="alert-link">clique aqui para reenviar</a>.',
+                        extra_tags='safe'
+                    )
+                    return self.render_to_response(
+                        self.get_context_data(form=form)
+                    )
+            except Usuario.DoesNotExist:
+                pass
+            except Usuario.MultipleObjectsReturned:
+                pass
+        
+        return super().form_invalid(form)
 
 
 class CustomLogoutView(LogoutView):
@@ -39,21 +77,160 @@ def registro(request):
     if request.method == 'POST':
         form = RegistroForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            # Define o backend antes do login para evitar erro de múltiplos backends
-            backend = 'usuarios.backends.EmailOrUsernameBackend'
-            user.backend = backend
-            login(request, user, backend=backend)
-            messages.success(
-                request,
-                f'Bem-vindo, {user.get_full_name()}! '
-                f'Sua conta foi criada com sucesso.'
-            )
-            return redirect('dashboard')
+            user = form.save(commit=False)
+            # Usuário inicia inativo até confirmar email
+            user.is_active = False
+            # Gera token de ativação
+            user.gerar_token_ativacao()
+            user.save()
+            
+            # Envia email de ativação
+            try:
+                link_ativacao = request.build_absolute_uri(
+                    reverse('usuarios:ativar_conta',
+                            args=[user.token_ativacao])
+                )
+                
+                assunto = 'Ative sua conta - Sistema de Agendamento UESPI'
+                mensagem = (
+                    f'Olá, {user.get_full_name()}!\n\n'
+                    f'Obrigado por se registrar no Sistema de Agendamento '
+                    f'de Veículos da UESPI.\n\n'
+                    f'Para ativar sua conta, clique no link abaixo:\n'
+                    f'{link_ativacao}\n\n'
+                    f'Este link é válido por 24 horas.\n\n'
+                    f'Se você não se cadastrou, ignore este e-mail.\n\n'
+                    f'Atenciosamente,\n'
+                    f'Equipe Sistema de Agendamento - UESPI'
+                )
+                
+                send_mail(
+                    assunto,
+                    mensagem,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+                
+                messages.success(
+                    request,
+                    f'Cadastro realizado com sucesso! '
+                    f'Um e-mail de ativação foi enviado para {user.email}. '
+                    f'Por favor, verifique sua caixa de entrada e spam.'
+                )
+            except Exception as e:
+                # Se falhar envio de email, avisa usuário
+                messages.warning(
+                    request,
+                    f'Cadastro realizado, mas houve um erro ao enviar '
+                    f'o e-mail de ativação. Entre em contato com o '
+                    f'administrador. Erro: {str(e)}'
+                )
+            
+            return redirect('usuarios:login')
     else:
         form = RegistroForm()
 
     return render(request, 'usuarios/registro.html', {'form': form})
+
+
+def confirmar_email(request, token):
+    """View para ativar conta através do token"""
+    try:
+        usuario = Usuario.objects.get(token_ativacao=token)
+        
+        # Verifica se o token não expirou (24 horas)
+        if usuario.token_criado_em:
+            tempo_decorrido = timezone.now() - usuario.token_criado_em
+            if tempo_decorrido.total_seconds() > 86400:  # 24 horas
+                messages.error(
+                    request,
+                    'Este link de ativação expirou. '
+                    'Por favor, solicite um novo link.'
+                )
+                return redirect('usuarios:login')
+        
+        # Ativa a conta
+        usuario.is_active = True
+        usuario.token_ativacao = ''  # Limpa o token usado
+        usuario.save()
+        
+        messages.success(
+            request,
+            f'Conta ativada com sucesso! '
+            f'Bem-vindo, {usuario.get_full_name()}. '
+            f'Agora você pode fazer login no sistema.'
+        )
+        return redirect('usuarios:login')
+        
+    except Usuario.DoesNotExist:
+        messages.error(
+            request,
+            'Link de ativação inválido. '
+            'Verifique o link e tente novamente.'
+        )
+        return redirect('usuarios:login')
+
+
+def reenviar_email_confirmacao(request):
+    """View para reenviar email de ativação"""
+    if request.method == 'POST':
+        email = request.POST.get('email', '').lower()
+        
+        try:
+            usuario = Usuario.objects.get(email=email, is_active=False)
+            
+            # Gera novo token
+            usuario.gerar_token_ativacao()
+            usuario.save()
+            
+            # Envia email
+            try:
+                link_ativacao = request.build_absolute_uri(
+                    reverse('usuarios:ativar_conta',
+                            args=[usuario.token_ativacao])
+                )
+                
+                assunto = 'Ative sua conta - Sistema de Agendamento UESPI'
+                mensagem = (
+                    f'Olá, {usuario.get_full_name()}!\n\n'
+                    f'Você solicitou um novo link de ativação.\n\n'
+                    f'Para ativar sua conta, clique no link abaixo:\n'
+                    f'{link_ativacao}\n\n'
+                    f'Este link é válido por 24 horas.\n\n'
+                    f'Atenciosamente,\n'
+                    f'Equipe Sistema de Agendamento - UESPI'
+                )
+                
+                send_mail(
+                    assunto,
+                    mensagem,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [usuario.email],
+                    fail_silently=False,
+                )
+                
+                messages.success(
+                    request,
+                    f'Um novo e-mail de ativação foi enviado para '
+                    f'{usuario.email}.'
+                )
+            except Exception as e:
+                messages.error(
+                    request,
+                    f'Erro ao enviar e-mail: {str(e)}'
+                )
+        except Usuario.DoesNotExist:
+            # Por segurança, não informa se o email existe ou não
+            messages.info(
+                request,
+                'Se o e-mail informado estiver cadastrado e pendente de '
+                'ativação, você receberá um novo link.'
+            )
+        
+        return redirect('usuarios:login')
+    
+    return render(request, 'usuarios/reenviar_confirmacao.html')
 
 
 def recuperar_senha_step1(request):

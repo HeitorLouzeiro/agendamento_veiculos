@@ -2,6 +2,11 @@
 
 {% block title %}Login - Sistema de Agendamento{% endblock %}
 
+{% block messages %}
+{# Sobrescreve o bloco de mensagens do base.html para não exibir mensagens no topo #}
+{# As mensagens serão exibidas dentro do card de login #}
+{% endblock messages %}
+
 {% block content %}
 <div class="container">
     <div class="row justify-content-center mt-5">
@@ -13,6 +18,9 @@
                         <h3 class="mt-3">Sistema de Agendamento</h3>
                         <p class="text-muted">Faça login para continuar</p>
                     </div>
+
+                    {# Inclui as mensagens dentro do card (sem container) #}
+                    {% include 'common/messages_inline.html' %}
 
                     {% if form.errors %}
                     <div class="alert alert-danger">
@@ -49,6 +57,13 @@
                         <a href="{% url 'usuarios:registro' %}" class="btn btn-outline-primary mt-2">
                             <i class="bi bi-person-plus"></i> Registrar-se como Professor
                         </a>
+                        
+                        <div class="mt-3">
+                            <p class="mb-0 text-muted small">Não recebeu o e-mail de ativação?</p>
+                            <a href="{% url 'usuarios:reenviar_confirmacao' %}" class="small text-primary">
+                                <i class="bi bi-envelope-check"></i> Reenviar link de ativação
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

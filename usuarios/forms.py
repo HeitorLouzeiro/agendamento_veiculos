@@ -106,10 +106,21 @@ class RegistroForm(UserCreationForm):
         return username
 
     def clean_email(self):
-        """Converte email para minúsculas e valida unicidade"""
+        """
+        Valida email institucional da UESPI e verifica unicidade
+        """
         email = self.cleaned_data.get('email')
         if email:
             email = email.lower()
+            # Aceita emails que terminam com @*.uespi.br
+            # Exemplos: @uespi.br, @aluno.uespi.br, @professor.uespi.br
+            if not (email.endswith('.uespi.br') or
+                        email.endswith('@uespi.br')):
+                 raise forms.ValidationError(
+                    'Por favor, utilize um e-mail institucional da UESPI '
+                     '(@uespi.br ou @*.uespi.br). '
+                     'Exemplo: nome@professor.uespi.br'
+                )
             # Verifica se já existe (exceto o próprio usuário em edição)
             if Usuario.objects.filter(email=email).exists():
                 raise forms.ValidationError(
