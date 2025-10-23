@@ -1,6 +1,6 @@
 # 🚗 Sistema de Agendamento de Veículos
 
-Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com **Django 5.2** e **Python 3.12**, com controle de quilometragem, trajetos e sistema de aprovação.
+Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com **Django 5.2** e **Python 3.12**, com controle de quilometragem, trajetos, sistema de aprovação e exportação de relatórios em PDF e Excel.
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
@@ -8,9 +8,38 @@ Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com 
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white)
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Django](https://img.shields.io/badge/Django-5.2.7-green.svg)](https://www.djangoproject.com/)
+[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
+
+## 📖 Sobre o Projeto
+
+O **Sistema de Agendamento de Veículos** é uma solução web completa e profissional para gerenciamento de solicitações, aprovações e controle de uso de veículos institucionais. Desenvolvido especificamente para instituições de ensino, o sistema oferece controle granular sobre agendamentos, trajetos, quilometragem e relatórios detalhados.
+
+### 🎯 Principais Objetivos
+
+- **Centralizar** a gestão de agendamentos de veículos
+- **Automatizar** processos de solicitação e aprovação
+- **Controlar** limites de quilometragem por curso/departamento
+- **Monitorar** uso de veículos em tempo real
+- **Gerar** relatórios profissionais para análise e auditoria
+- **Prevenir** conflitos de horários e uso inadequado
+
+### 💡 Por que usar este sistema?
+
+✅ **Interface Intuitiva** - Fácil de usar para professores e administradores  
+✅ **Controle Total** - Aprovação centralizada e rastreamento completo  
+✅ **Economia** - Monitore e controle gastos com combustível  
+✅ **Relatórios Profissionais** - PDF e Excel para análise e auditoria  
+✅ **Segurança** - Autenticação robusta e recuperação de senha  
+✅ **Escalável** - Pronto para crescer com sua instituição  
+✅ **Moderno** - Tecnologias atuais e melhores práticas  
+✅ **Open Source** - Código aberto e customizável
+
 ## 📋 Sumário
 
-- [🚀 Início Rápido](#-início-rápido)
+- [� Sobre o Projeto](#-sobre-o-projeto)
+- [�🚀 Início Rápido](#-início-rápido)
   - [🐳 Com Docker (Recomendado)](#-com-docker-recomendado)
   - [⚡ Com Scripts de Automação](#-com-scripts-de-automação)
   - [🛠️ Instalação Manual](#%EF%B8%8F-instalação-manual)
@@ -21,11 +50,14 @@ Sistema completo de gerenciamento de agendamentos de veículos desenvolvido com 
 - [🔧 Configuração Básica](#-configuração-básica)
 - [🐳 Docker](#-docker)
 - [⚡ Scripts de Automação](#-scripts-de-automação)
+- [📊 Exportação de Relatórios](#-exportação-de-relatórios)
 - [🏃‍♂️ Comandos Úteis](#%EF%B8%8F-comandos-úteis)
 - [📖 Uso do Sistema](#-uso-do-sistema)
 - [🔒 Sistema de Autenticação](#-sistema-de-autenticação)
 - [📁 Estrutura do Projeto](#-estrutura-do-projeto)
 - [🗄️ Modelos de Dados](#%EF%B8%8F-modelos-de-dados)
+- [🧪 Testes](#-testes)
+- [❓ FAQ](#-faq)
 - [👤 Autor](#-autor)
 - [🤝 Contribuição](#-contribuição)
 - [📜 Licença](#-licença)
@@ -159,13 +191,19 @@ O sistema segue a arquitetura **MVT (Model-View-Template)** do Django:
 
 ### 🔧 Funcionalidades do Sistema
 - ✅ Sistema de autenticação por e-mail ou username
+- ✅ **Ativação de conta por e-mail institucional**
+- ✅ **Restrição de cadastro apenas para e-mails institucionais**
 - ✅ Validação automática de conflitos de horários
 - ✅ Controle de limite de KM mensal por curso
 - ✅ Histórico completo de trajetos e quilometragem
 - ✅ Interface responsiva para desktop e mobile
 - ✅ Notificações de status de agendamento
-- ✅ Relatórios de uso de veículos
+- ✅ **Exportação de relatórios em PDF e Excel**
+- ✅ **Relatórios gerais, por curso e por professor**
 - ✅ Sistema de busca e filtros avançados
+- ✅ Dashboard com estatísticas em tempo real
+- ✅ Sistema de paginação inteligente
+- ✅ Calendário visual de agendamentos
 
 ## 🛠️ Tecnologias
 
@@ -193,12 +231,31 @@ O sistema segue a arquitetura **MVT (Model-View-Template)** do Django:
 - **pytz** 2025.2 - Suporte a fusos horários
 - **gunicorn** 23.0.0 - Servidor WSGI para produção
 - **whitenoise** 6.11.0 - Servir arquivos estáticos em produção
+- **reportlab** 4.4.4 - Geração de PDFs
+- **openpyxl** 3.1.5 - Geração de planilhas Excel
+- **xlsxwriter** 3.2.9 - Escrita de arquivos Excel avançados
 
 ### DevOps & Containerização
 - **Docker** - Containerização da aplicação
 - **Docker Compose** - Orquestração de containers
 - **PostgreSQL** (Docker) - Banco de dados em container
 - **WhiteNoise** - Servir arquivos estáticos em produção
+- **Gunicorn** - Servidor WSGI para produção
+
+### 🔒 Segurança
+- **CSRF Protection** - Proteção contra ataques CSRF
+- **SQL Injection Protection** - ORM do Django
+- **XSS Protection** - Template engine seguro
+- **Password Hashing** - Senhas com hash seguro (PBKDF2)
+- **Perguntas de Segurança** - Sistema de recuperação de senha
+- **Autenticação Customizada** - Backend de autenticação por e-mail
+
+### ⚡ Performance
+- **Database Indexing** - Índices otimizados
+- **Query Optimization** - Consultas otimizadas com select_related
+- **Static Files Compression** - WhiteNoise com compressão
+- **Connection Pooling** - Pool de conexões PostgreSQL
+- **Lazy Loading** - Carregamento sob demanda
 
 ## 📦 Instalação
 
@@ -350,10 +407,81 @@ DB_ENGINE=sqlite3          # Para desenvolvimento local
 # ou
 DB_ENGINE=postgresql       # Para Docker/Produção
 
+# Configuração de E-mail (OBRIGATÓRIO para ativação de contas)
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=seu-email@gmail.com
+EMAIL_HOST_PASSWORD=sua-senha-de-app
+DEFAULT_FROM_EMAIL=noreply@uespi.br
+
+# Domínios de E-mail Institucionais Permitidos
+ALLOWED_EMAIL_DOMAINS=uespi.br,aluno.uespi.br,phb.uespi.br
+
 # Localização
 LANGUAGE_CODE=pt-br
 TIME_ZONE=America/Sao_Paulo
 ```
+
+### 📧 Configuração de E-mail
+
+**Importante:** O sistema requer configuração de e-mail para ativação de contas.
+
+#### **Opção 1: Gmail (Desenvolvimento/Teste)**
+
+1. **Crie uma senha de aplicativo** no Gmail:
+   - Acesse https://myaccount.google.com/security
+   - Ative a "Verificação em duas etapas"
+   - Vá em "Senhas de app"
+   - Gere uma senha para "E-mail" ou "Outro"
+
+2. **Configure no `.env`:**
+```env
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=seu-email@gmail.com
+EMAIL_HOST_PASSWORD=xxxx-xxxx-xxxx-xxxx  # Senha de app gerada
+DEFAULT_FROM_EMAIL=noreply@uespi.br
+```
+
+#### **Opção 2: Servidor SMTP Institucional (Produção)**
+
+```env
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.uespi.br
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=sistema@uespi.br
+EMAIL_HOST_PASSWORD=senha-segura
+DEFAULT_FROM_EMAIL=noreply@uespi.br
+```
+
+#### **Opção 3: Console (Apenas Desenvolvimento Local)**
+
+Para desenvolvimento sem configurar e-mail real:
+
+```env
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+```
+
+> ⚠️ **Atenção:** Com `console.EmailBackend`, os e-mails são exibidos no terminal, não são enviados de verdade. **Não use em produção!**
+
+### 🏢 Domínios de E-mail Institucionais
+
+Configure os domínios aceitos em `ALLOWED_EMAIL_DOMAINS`:
+
+```env
+# Aceitar múltiplos domínios (separados por vírgula)
+ALLOWED_EMAIL_DOMAINS=uespi.br,aluno.uespi.br,phb.uespi.br,cca.uespi.br
+```
+
+**Exemplos de configuração:**
+- **Apenas professores:** `ALLOWED_EMAIL_DOMAINS=uespi.br`
+- **Professores e alunos:** `ALLOWED_EMAIL_DOMAINS=uespi.br,aluno.uespi.br`
+- **Múltiplos campus:** `ALLOWED_EMAIL_DOMAINS=uespi.br,phb.uespi.br,cca.uespi.br`
 
 ### ⚙️ Ambientes Suportados
 
@@ -544,11 +672,14 @@ python manage.py runserver 0.0.0.0:8000    # Acessível na rede
 # Migrações
 python manage.py makemigrations             # Criar migrações
 python manage.py migrate                    # Aplicar migrações
+python manage.py showmigrations             # Ver status das migrações
+python manage.py sqlmigrate app_name 0001   # Ver SQL de uma migração
 
 # Administração
 python manage.py createsuperuser           # Criar administrador
 python manage.py collectstatic             # Arquivos estáticos
 python manage.py shell                     # Shell Django
+python manage.py dbshell                   # Shell do banco de dados
 
 # Dados de exemplo com parâmetros
 python manage.py load_sample_data           # Valores padrão
@@ -557,6 +688,45 @@ python manage.py load_sample_data --professores 15 --agendamentos 50 --administr
 # Gerenciamento de usuários
 python manage.py changepassword <username>  # Alterar senha de usuário
 python manage.py list_users                 # Listar todos os usuários
+```
+
+### 🐳 Comandos Docker
+
+```bash
+# Construir e iniciar
+docker-compose build                        # Construir imagens
+docker-compose up                           # Iniciar serviços
+docker-compose up -d                        # Iniciar em background
+docker-compose --profile dev up             # Modo desenvolvimento
+
+# Gerenciamento
+docker-compose down                         # Parar serviços
+docker-compose down -v                      # Parar e remover volumes
+docker-compose restart                      # Reiniciar serviços
+docker-compose ps                           # Ver status dos containers
+
+# Logs
+docker-compose logs -f                      # Todos os logs
+docker-compose logs -f web                  # Logs da aplicação
+docker-compose logs -f db                   # Logs do banco
+
+# Django no Docker
+docker-compose run --rm web python manage.py migrate
+docker-compose run --rm web python manage.py createsuperuser
+docker-compose run --rm web python manage.py collectstatic --noinput
+docker-compose run --rm web python manage.py shell
+
+# Dados de exemplo no Docker
+docker-compose run --rm web python manage.py load_sample_data
+docker-compose run --rm web python manage.py load_sample_data --professores 20 --agendamentos 100
+
+# Acesso aos containers
+docker-compose exec web bash                # Acessar container web
+docker-compose exec db psql -U postgres -d agendamento_veiculos  # Acessar PostgreSQL
+
+# Backup e restore
+docker-compose exec db pg_dump -U postgres agendamento_veiculos > backup.sql
+docker-compose exec -T db psql -U postgres agendamento_veiculos < backup.sql
 ```
 
 ### � Comandos Avançados
@@ -651,10 +821,57 @@ Acesse `/admin/` para usar a interface administrativa completa do Django com rec
 ### Características de Segurança
 
 - ✅ Autenticação por **e-mail** ou **username**
+- ✅ **Ativação de conta por e-mail institucional**
+- ✅ **Restrição para e-mails institucionais** (ex: @uespi.br, @aluno.uespi.br)
 - ✅ Backend customizado (`EmailOrUsernameBackend`)
 - ✅ Recuperação de senha por **perguntas de segurança**
 - ✅ Proteção CSRF e validação de senhas fortes
 - ✅ Rotas protegidas por nível de acesso
+
+### 📧 Registro e Ativação de Conta
+
+#### **Como Funciona o Registro**
+
+1. **Cadastro Inicial:**
+   - Preencha o formulário com seus dados
+   - Use **obrigatoriamente um e-mail institucional**
+   - Escolha 3 perguntas de segurança e suas respostas
+   - Defina uma senha segura
+
+2. **E-mails Institucionais Aceitos:**
+   ```
+   ✅ @uespi.br           - E-mail de professores/funcionários
+   ✅ @aluno.uespi.br     - E-mail de alunos
+   ✅ @phb.uespi.br       - E-mail de campus específico
+   ```
+   
+   **Exemplos válidos:**
+   - `joao.silva@uespi.br`
+   - `maria.santos@aluno.uespi.br`
+   - `pedro.oliveira@phb.uespi.br`
+
+3. **Ativação por E-mail:**
+   - Após o cadastro, um **e-mail de ativação** é enviado
+   - Clique no link recebido para **ativar sua conta**
+   - O link expira em **24 horas**
+   - Sem ativação, você não consegue fazer login
+
+4. **Status da Conta:**
+   - ⏳ **Pendente** - Aguardando ativação por e-mail
+   - ✅ **Ativa** - Pode fazer login normalmente
+   - ❌ **Inativa** - Desativada pelo administrador
+
+#### **Importante:**
+
+⚠️ **Somente e-mails institucionais são aceitos**
+- E-mails comuns como `@gmail.com`, `@hotmail.com` serão **rejeitados**
+- Entre em contato com o administrador caso seu domínio institucional não seja aceito
+
+📧 **Não recebeu o e-mail de ativação?**
+- Verifique a caixa de **spam/lixo eletrônico**
+- Aguarde alguns minutos (pode haver atraso)
+- Solicite reenvio do e-mail de ativação
+- Entre em contato com o administrador do sistema
 
 ### 🔐 Sistema de Recuperação de Senha
 
@@ -959,51 +1176,637 @@ class Trajeto(models.Model):
 **Propriedades:**
 - `km_percorridos` - Calcula a diferença entre KM final e inicial
 
+## ❓ FAQ
+
+### 🔧 Instalação e Configuração
+
+<details>
+<summary><b>Qual a diferença entre rodar com Docker ou localmente?</b></summary>
+
+**Docker:**
+- ✅ Ambiente isolado e consistente
+- ✅ PostgreSQL configurado automaticamente
+- ✅ Não precisa instalar Python/PostgreSQL localmente
+- ✅ Ideal para produção e desenvolvimento em equipe
+- ❌ Requer Docker e Docker Compose instalados
+
+**Local:**
+- ✅ Mais rápido para desenvolvimento
+- ✅ Acesso direto aos arquivos
+- ✅ Usa SQLite (mais simples)
+- ❌ Precisa instalar Python 3.12+
+- ❌ Configuração manual de ambiente virtual
+
+**Recomendação:** Use Docker para produção e trabalho em equipe. Use local para desenvolvimento rápido.
+</details>
+
+<details>
+<summary><b>Como alterar a porta do servidor?</b></summary>
+
+**Desenvolvimento Local:**
+```bash
+python manage.py runserver 8080
+```
+
+**Docker:**
+Edite o arquivo `docker-compose.yml`:
+```yaml
+ports:
+  - "8080:8000"  # Mude 8080 para a porta desejada
+```
+</details>
+
+<details>
+<summary><b>Esqueci a senha do superusuário, como recuperar?</b></summary>
+
+**Método 1 - Django Admin:**
+```bash
+python manage.py changepassword admin
+```
+
+**Método 2 - Django Shell:**
+```bash
+python manage.py shell
+>>> from usuarios.models import Usuario
+>>> user = Usuario.objects.get(username='admin')
+>>> user.set_password('nova_senha_123')
+>>> user.save()
+>>> exit()
+```
+
+**Docker:**
+```bash
+docker-compose run --rm web python manage.py changepassword admin
+```
+</details>
+
+### 📊 Funcionalidades
+
+<details>
+<summary><b>Como funcionam os limites de quilometragem por curso?</b></summary>
+
+Cada curso pode ter um limite mensal de KM configurado. O sistema:
+1. Soma todos os trajetos aprovados do curso no mês
+2. Compara com o limite configurado
+3. Exibe alertas quando o limite está próximo (80%+)
+4. Permite que administradores configurem limites diferentes por curso
+
+**Exemplo:**
+- Curso: Administração
+- Limite Mensal: 5.000 km
+- Utilizado em Outubro: 4.200 km (84%)
+- Status: ⚠️ Próximo ao limite
+</details>
+
+<details>
+<summary><b>Posso exportar relatórios personalizados?</b></summary>
+
+Sim! O sistema oferece 3 tipos de relatórios:
+
+1. **Relatório Geral** - Todos os agendamentos
+2. **Relatório por Curso** - Uso de KM por curso
+3. **Relatório por Professor** - Histórico individual
+
+Cada um pode ser exportado em:
+- 📄 **PDF** - Relatório formatado para impressão
+- 📊 **Excel** - Planilha para análise avançada
+
+Você pode filtrar por:
+- Data de início/fim
+- Status (aprovado, pendente, reprovado)
+- Veículo específico
+- Curso específico
+</details>
+
+<details>
+<summary><b>Como o sistema previne conflitos de horário?</b></summary>
+
+O sistema verifica automaticamente se:
+1. O veículo já está agendado no horário solicitado
+2. Há sobreposição de horários (mesmo que parcial)
+3. O veículo está ativo e disponível
+
+Se houver conflito, o sistema:
+- ❌ Impede a criação do agendamento
+- 📝 Exibe mensagem clara sobre o conflito
+- 📅 Sugere horários alternativos (futuro)
+</details>
+
+### 🔒 Segurança
+
+<details>
+<summary><b>Como funciona a ativação de conta por e-mail?</b></summary>
+
+O sistema requer **ativação por e-mail** para novos usuários:
+
+**Processo:**
+1. **Cadastro:** Preencha o formulário com e-mail institucional
+2. **E-mail enviado:** Link de ativação enviado automaticamente
+3. **Clique no link:** Ative sua conta em até 24 horas
+4. **Login liberado:** Após ativação, pode fazer login
+
+**E-mails aceitos:**
+- ✅ `@uespi.br` - Professores e funcionários
+- ✅ `@aluno.uespi.br` - Alunos
+- ✅ `@phb.uespi.br` - Campus específico
+- ❌ `@gmail.com`, `@hotmail.com` - **Não aceitos**
+
+**Não recebeu o e-mail?**
+- Verifique o **spam/lixo eletrônico**
+- Aguarde alguns minutos
+- Solicite reenvio ao administrador
+
+**Importante:** Sem ativação, não é possível fazer login!
+</details>
+
+<details>
+<summary><b>Como funciona o sistema de recuperação de senha?</b></summary>
+
+O sistema usa **perguntas de segurança** em 3 etapas:
+
+1. **Identificação:** Informe e-mail ou username
+2. **Verificação:** Responda 2 das 3 perguntas de segurança cadastradas
+3. **Redefinição:** Defina uma nova senha segura
+
+**Vantagens:**
+- ✅ Não precisa de e-mail SMTP configurado
+- ✅ Funciona offline
+- ✅ Mais rápido que recuperação por e-mail
+- ✅ Usuário controla suas respostas
+
+**Observação:** As respostas são **case-sensitive** (diferenciam maiúsculas/minúsculas).
+</details>
+
+<details>
+<summary><b>Por que meu e-mail não é aceito no cadastro?</b></summary>
+
+O sistema **aceita apenas e-mails institucionais** para garantir segurança:
+
+**E-mails aceitos:**
+```
+✅ usuario@uespi.br
+✅ usuario@aluno.uespi.br
+✅ usuario@phb.uespi.br
+✅ usuario@cca.uespi.br
+```
+
+**E-mails rejeitados:**
+```
+❌ usuario@gmail.com
+❌ usuario@hotmail.com
+❌ usuario@yahoo.com
+❌ usuario@outlook.com
+```
+
+**Soluções:**
+- Use seu **e-mail institucional**
+- Se não tem, solicite ao setor de TI da instituição
+- Se seu domínio institucional não é aceito, contate o administrador do sistema
+
+**Para administradores:**
+Configure domínios aceitos em `.env`:
+```env
+ALLOWED_EMAIL_DOMAINS=uespi.br,aluno.uespi.br,phb.uespi.br
+```
+</details>
+
+<details>
+<summary><b>Quais são os requisitos de senha segura?</b></summary>
+
+Senhas devem ter:
+- ✅ Mínimo de **8 caracteres**
+- ✅ Pelo menos **1 letra maiúscula**
+- ✅ Pelo menos **1 letra minúscula**
+- ✅ Pelo menos **1 número**
+- ✅ Pelo menos **1 caractere especial** (@, #, $, %, etc.)
+
+**Exemplos válidos:**
+- `Senha@123`
+- `Admin#2025`
+- `Professor$99`
+
+**Exemplos inválidos:**
+- `senha123` (sem maiúscula e sem caractere especial)
+- `SENHA@` (sem minúscula e sem número)
+- `Abc@1` (menos de 8 caracteres)
+</details>
+
+### 🚀 Deploy e Produção
+
+<details>
+<summary><b>Como fazer deploy em produção?</b></summary>
+
+**Checklist para Produção:**
+
+1. **Configure variáveis de ambiente:**
+```env
+DEBUG=False
+SECRET_KEY=chave-secreta-forte-e-unica
+ALLOWED_HOSTS=seudominio.com,www.seudominio.com
+DB_ENGINE=postgresql
+```
+
+2. **Use PostgreSQL:**
+```env
+DB_NAME=agendamento_veiculos
+DB_USER=usuario_producao
+DB_PASSWORD=senha_forte
+DB_HOST=db.seudominio.com
+DB_PORT=5432
+```
+
+3. **Colete arquivos estáticos:**
+```bash
+python manage.py collectstatic --noinput
+```
+
+4. **Use Gunicorn + Nginx:**
+```bash
+gunicorn agendamento_veiculos.wsgi:application --bind 0.0.0.0:8000
+```
+
+5. **Configure HTTPS** (obrigatório para produção)
+
+**Recomendação:** Use Docker em produção com docker-compose.yml configurado.
+</details>
+
+<details>
+<summary><b>O sistema suporta múltiplas instâncias/instituições?</b></summary>
+
+Atualmente, o sistema é **single-tenant** (uma instância por instituição).
+
+**Para múltiplas instituições:**
+1. Rode uma instância Docker separada para cada instituição
+2. Use bancos de dados separados
+3. Configure domínios diferentes
+
+**Futuro:** Planejamos adicionar suporte multi-tenant em versões futuras.
+</details>
+
+### 🛠️ Desenvolvimento
+
+<details>
+<summary><b>Como adicionar novos campos aos modelos?</b></summary>
+
+1. Edite o modelo em `app/models.py`:
+```python
+class Veiculo(models.Model):
+    # Campos existentes...
+    novo_campo = models.CharField(max_length=100, blank=True)
+```
+
+2. Crie e aplique migração:
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+3. Atualize formulários e views conforme necessário.
+</details>
+
+<details>
+<summary><b>Como adicionar novos tipos de relatórios?</b></summary>
+
+1. Crie nova view em `agendamentos/views/relatorio_views.py`
+2. Herde de `PDFExporter` ou `ExcelExporter`
+3. Implemente método de exportação
+4. Adicione rota em `agendamentos/urls.py`
+5. Adicione link no template
+
+**Exemplo:**
+```python
+from agendamentos.exports import PDFExporter
+
+class RelatorioCustomizado:
+    def gerar(self, filtros):
+        exporter = PDFExporter()
+        return exporter.export_custom(filtros)
+```
+</details>
+
+<details>
+<summary><b>Posso integrar com outros sistemas?</b></summary>
+
+Sim! Você pode:
+1. **Criar uma API REST** usando Django REST Framework
+2. **Exportar dados** via CSV/JSON
+3. **Integrar autenticação** com LDAP/Active Directory
+4. **Webhook**s para notificações externas
+
+**Exemplo de API simples:**
+```python
+from django.http import JsonResponse
+
+def api_agendamentos(request):
+    agendamentos = Agendamento.objects.filter(status='aprovado')
+    data = [{'id': a.id, 'veiculo': a.veiculo.placa} for a in agendamentos]
+    return JsonResponse(data, safe=False)
+```
+</details>
+
+### 📞 Suporte
+
+<details>
+<summary><b>Encontrei um bug, como reportar?</b></summary>
+
+1. **Verifique** se o bug já foi reportado nas [Issues](https://github.com/HeitorLouzeiro/agendamento_veiculos/issues)
+2. **Abra uma nova Issue** com:
+   - Descrição clara do problema
+   - Passos para reproduzir
+   - Comportamento esperado vs atual
+   - Screenshots (se aplicável)
+   - Informações de ambiente (OS, Python, Docker/Local)
+
+3. **Use o template** fornecido para facilitar o diagnóstico
+</details>
+
+<details>
+<summary><b>Posso contratar suporte profissional?</b></summary>
+
+Sim! Entre em contato:
+- 📧 Email: [contato@heitorlouzeiro.dev](mailto:contato@heitorlouzeiro.dev)
+- 💼 LinkedIn: [Heitor Louzeiro](https://www.linkedin.com/in/heitor-louzeiro/)
+
+Oferecemos:
+- ✅ Instalação e configuração
+- ✅ Customizações
+- ✅ Treinamento de usuários
+- ✅ Suporte técnico
+- ✅ Desenvolvimento de features customizadas
+</details>
+
+---
+
 ## 👤 Autor
 
-**Heitor Louzeiro** - *Desenvolvedor Principal*
-- GitHub: [@HeitorLouzeiro](https://github.com/HeitorLouzeiro)
-- LinkedIn: [Heitor Louzeiro](https://www.linkedin.com/in/heitor-louzeiro/)
+**Heitor Louzeiro** - *Desenvolvedor Full Stack*
+- 💼 GitHub: [@HeitorLouzeiro](https://github.com/HeitorLouzeiro)
+- 💻 LinkedIn: [Heitor Louzeiro](https://www.linkedin.com/in/heitor-louzeiro/)
+- 📧 Email: [contato@heitorlouzeiro.dev](mailto:contato@heitorlouzeiro.dev)
+
+### 🌟 Outros Projetos
+
+Confira outros projetos interessantes:
+- [Portfolio](https://github.com/HeitorLouzeiro) - Veja mais projetos
+- [Blog Técnico](#) - Artigos sobre desenvolvimento
 
 ## 🤝 Contribuição
 
+Contribuições são sempre bem-vindas! Este projeto segue as melhores práticas de código aberto.
+
+### 🔀 Como Contribuir
+
 1. **Fork** o projeto
-2. Crie uma **branch** para sua feature (`git checkout -b feature/NovaFuncionalidade`)
-3. **Commit** suas mudanças (`git commit -m 'Adiciona NovaFuncionalidade'`)
-4. **Push** para a branch (`git push origin feature/NovaFuncionalidade`)
-5. Abra um **Pull Request**
+   ```bash
+   # Clique em "Fork" no GitHub
+   ```
 
-### Diretrizes de Contribuição
+2. **Clone** seu fork
+   ```bash
+   git clone https://github.com/seu-usuario/agendamento_veiculos.git
+   cd agendamento_veiculos
+   ```
 
-- ✅ Siga a **PEP 8** para código Python
-- ✅ Use **nomes descritivos** para variáveis e funções
-- ✅ Adicione **docstrings** para classes e funções
-- ✅ Escreva **testes** para novas funcionalidades
-- ✅ Atualize a **documentação** quando necessário
-- ✅ Use **commits semânticos**
+3. **Crie uma branch** para sua feature
+   ```bash
+   git checkout -b feature/MinhaNovaFuncionalidade
+   ```
 
-### Commits Semânticos
+4. **Faça suas alterações** e commit
+   ```bash
+   git add .
+   git commit -m 'feat: Adiciona MinhaNovaFuncionalidade'
+   ```
 
+5. **Push** para sua branch
+   ```bash
+   git push origin feature/MinhaNovaFuncionalidade
+   ```
+
+6. **Abra um Pull Request**
+   - Acesse seu fork no GitHub
+   - Clique em "New Pull Request"
+   - Descreva suas alterações em detalhes
+
+### 📋 Diretrizes de Contribuição
+
+#### ✅ Code Style
+
+- Siga a **PEP 8** para código Python
+- Use **4 espaços** para indentação (não tabs)
+- Linhas com no máximo **79 caracteres** (código) ou **72** (comentários)
+- Use **nomes descritivos** para variáveis e funções
+- Prefira **inglês** para nomes de variáveis e funções
+- Adicione **docstrings** para classes e funções
+
+**Exemplo:**
+```python
+def calculate_monthly_kilometers(course_id: int, year: int, month: int) -> float:
+    """
+    Calcula os quilômetros utilizados por um curso em um mês específico.
+    
+    Args:
+        course_id: ID do curso
+        year: Ano da consulta
+        month: Mês da consulta (1-12)
+    
+    Returns:
+        Total de quilômetros utilizados
+    
+    Raises:
+        Course.DoesNotExist: Se o curso não existir
+    """
+    # Implementação
+    pass
 ```
-feat: Nova funcionalidade
-fix: Correção de bug
-docs: Alteração na documentação
-style: Formatação de código
+
+#### 🧪 Testes
+
+- **Escreva testes** para novas funcionalidades (quando possível)
+- Use **nomes descritivos** para testes
+- Organize testes por **módulo** (models, views, forms)
+
+> 💡 **Nota:** O projeto atualmente não possui uma suíte completa de testes implementada. Contribuições com testes são muito bem-vindas!
+
+#### 📝 Documentação
+
+- **Atualize a documentação** quando necessário
+- Use **Markdown** para arquivos de documentação
+- Inclua **exemplos práticos** quando possível
+- Mantenha o **README** atualizado
+
+#### 💬 Commits Semânticos
+
+Use commits semânticos para manter o histórico organizado:
+
+```bash
+# Tipos de commit
+feat:     Nova funcionalidade
+fix:      Correção de bug
+docs:     Alteração na documentação
+style:    Formatação de código (sem mudança funcional)
 refactor: Refatoração de código
-test: Adição ou correção de testes
-chore: Tarefas de manutenção
+test:     Adição ou correção de testes
+chore:    Tarefas de manutenção
+perf:     Melhoria de performance
+ci:       Alterações em CI/CD
+build:    Alterações no sistema de build
 ```
+
+**Exemplos:**
+```bash
+git commit -m "feat: adiciona exportação de relatórios em PDF"
+git commit -m "fix: corrige validação de conflitos de horário"
+git commit -m "docs: atualiza README com instruções de Docker"
+git commit -m "test: adiciona testes para modelo Agendamento"
+git commit -m "refactor: melhora estrutura de views de relatórios"
+```
+
+#### 🐛 Reportar Bugs
+
+Ao reportar bugs, inclua:
+
+1. **Descrição clara** do problema
+2. **Passos para reproduzir**
+3. **Comportamento esperado** vs **comportamento atual**
+4. **Screenshots** (se aplicável)
+5. **Ambiente** (OS, Python version, Docker/Local)
+
+**Template de Issue:**
+```markdown
+## Descrição
+[Descrição clara e concisa do bug]
+
+## Passos para Reproduzir
+1. Vá para '...'
+2. Clique em '...'
+3. Veja o erro
+
+## Comportamento Esperado
+[O que deveria acontecer]
+
+## Comportamento Atual
+[O que está acontecendo]
+
+## Screenshots
+[Se aplicável]
+
+## Ambiente
+- OS: Windows 11
+- Python: 3.12
+- Django: 5.2.7
+- Ambiente: Docker / Local
+```
+
+#### ✨ Sugerir Melhorias
+
+Para sugerir novas funcionalidades:
+
+1. **Verifique** se já não existe uma issue similar
+2. **Descreva** a funcionalidade em detalhes
+3. **Explique** o caso de uso
+4. **Sugira** uma possível implementação
+
+### 🎯 Áreas para Contribuição
+
+- 🐛 **Correção de bugs**
+- ✨ **Novas funcionalidades**
+- 📝 **Melhorias na documentação**
+- 🧪 **Implementação de testes automatizados**
+- 🎨 **Melhorias de UI/UX**
+- 🌍 **Traduções** (i18n)
+- ⚡ **Otimizações de performance**
+- 🔒 **Melhorias de segurança**
+
+### 🏆 Reconhecimento
+
+Todos os contribuidores serão reconhecidos no projeto. Muito obrigado a todos que contribuírem!
+
+### 📞 Dúvidas?
+
+- 💬 Abra uma **Discussion** no GitHub
+- 📧 Envie um **e-mail**
+- 💼 Conecte-se no **LinkedIn**
 
 ## 📜 Licença
 
-Este projeto está licenciado sob a Apache License - veja o arquivo [LICENSE](LICENSE) para detalhes.
+Este projeto está licenciado sob a **Apache License 2.0** - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+### 📄 Sobre a Licença Apache 2.0
+
+A Apache License 2.0 é uma licença permissiva que:
+
+✅ **Permite:**
+- ✔️ Uso comercial
+- ✔️ Modificação do código
+- ✔️ Distribuição
+- ✔️ Uso de patentes
+- ✔️ Uso privado
+
+⚠️ **Requer:**
+- 📋 Incluir cópia da licença e aviso de copyright
+- 📝 Documentar mudanças significativas
+- 🏷️ Manter avisos de patentes
+
+❌ **Não permite:**
+- ❗ Uso de marcas registradas
+- 🚫 Responsabilização do autor
+
+### 🤝 Uso Comercial
+
+Este projeto pode ser usado comercialmente. Se você usar este projeto em um produto comercial, agradeceríamos:
+- ⭐ Uma estrela no GitHub
+- 📧 Um e-mail contando sobre seu uso
+- 🔗 Um link de volta para este repositório
 
 ---
 
 <div align="center">
 
-🚗 **Sistema de Agendamento de Veículos** 🚗
+## 🚗 Sistema de Agendamento de Veículos 🚗
 
-*Desenvolvido com Django - Controle total dos seus agendamentos*
+[![GitHub Stars](https://img.shields.io/github/stars/HeitorLouzeiro/agendamento_veiculos?style=social)](https://github.com/HeitorLouzeiro/agendamento_veiculos/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/HeitorLouzeiro/agendamento_veiculos?style=social)](https://github.com/HeitorLouzeiro/agendamento_veiculos/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/HeitorLouzeiro/agendamento_veiculos)](https://github.com/HeitorLouzeiro/agendamento_veiculos/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/HeitorLouzeiro/agendamento_veiculos)](https://github.com/HeitorLouzeiro/agendamento_veiculos/pulls)
+
+*Desenvolvido com ❤️ usando Django - Controle total e profissional dos seus agendamentos de veículos*
+
+### 🌟 Características Principais
+
+📅 **Agendamentos Inteligentes** | 🚗 **Gestão de Veículos** | 👥 **Controle de Usuários** | 📊 **Relatórios Detalhados**
+
+🔒 **Autenticação Segura** | 🛣️ **Controle de KM** | 📱 **Interface Responsiva** | 🐳 **Docker Ready**
+
+---
+
+### 🚀 Quick Links
+
+[📖 Documentação](README.md) • [🐳 Docker Setup](DOCKER.md) • [⚡ Scripts](SCRIPTS.md) • [🐛 Report Bug](https://github.com/HeitorLouzeiro/agendamento_veiculos/issues) • [✨ Request Feature](https://github.com/HeitorLouzeiro/agendamento_veiculos/issues)
+
+---
+
+### 📊 Status do Projeto
+
+![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow)
+![Maintained](https://img.shields.io/badge/Maintained-Yes-green)
+![Last Commit](https://img.shields.io/github/last-commit/HeitorLouzeiro/agendamento_veiculos)
+
+---
+
+### 💼 Desenvolvedor
+
+**Heitor Louzeiro**
+
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/HeitorLouzeiro)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/heitor-louzeiro/)
+
+---
+
+### ⭐ Se este projeto foi útil, considere dar uma estrela!
+
+**Made with** 💻 **and** ☕ **in Brazil** 🇧🇷
+
+Copyright © 2025 Heitor Louzeiro. All rights reserved.
 
 </div>

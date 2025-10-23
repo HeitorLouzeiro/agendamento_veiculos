@@ -6,8 +6,9 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from agendamentos.models import Agendamento
+from django.contrib.auth.decorators import login_required
 
-
+@login_required
 def dashboard(request):
     """Página principal com calendário de agendamentos (público)"""
     # Obter o mês e ano do calendário (padrão: mês atual)
