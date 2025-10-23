@@ -8,11 +8,31 @@ bibliotecas de calendário front-end.
 from django.http import JsonResponse
 
 from ..models import Agendamento
+from django.db.models import Q
 
 
 def agendamentos_json(request):
     """Retorna agendamentos em formato JSON para o calendário."""
-    agendamentos = Agendamento.objects.all().select_related(
+    # Administradores veem todos os agendamentos (exceto cancelados)
+    # Usuários comuns veem:
+    #   - Todos os agendamentos aprovados (para ver disponibilidade)
+    #   - Apenas seus próprios pendentes (não mostra cancelados)
+    # Usuários não autenticados veem apenas aprovados
+    
+    if not request.user.is_authenticated:
+        # Não autenticado: apenas aprovados
+        agendamentos = Agendamento.objects.filter(status='aprovado')
+    elif request.user.is_administrador():
+        # Admin: todos exceto cancelados
+        agendamentos = Agendamento.objects.exclude(status='reprovado')
+    else:
+        # Usuários comuns: aprovados de todos + seus próprios pendentes
+        agendamentos = Agendamento.objects.filter(
+            Q(status='aprovado') |
+            Q(professor=request.user, status='pendente')
+        )
+
+    agendamentos = agendamentos.select_related(
         'professor', 'curso', 'veiculo'
     )
 
