@@ -21,14 +21,12 @@ from ..services import AgendamentoService, RelatorioService
 
 @login_required
 def lista_agendamentos(request):
-    """Lista agendamentos do usuário (ou todos se admin)."""
-    # Obter agendamentos base
-    if request.user.is_administrador():
-        agendamentos = Agendamento.objects.all()
-    else:
-        agendamentos = Agendamento.objects.filter(
-            professor=request.user
-        )
+    """Lista agendamentos que o próprio usuário criou."""
+    # Todos os usuários (professores e administradores) veem apenas
+    # os agendamentos que eles mesmos criaram
+    agendamentos = Agendamento.objects.filter(
+        professor=request.user
+    )
 
     agendamentos = agendamentos.select_related(
         'curso', 'professor', 'veiculo'

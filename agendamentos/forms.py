@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
+from django.utils import timezone
 
 from cursos.models import Curso
 from veiculos.models import Veiculo
@@ -40,15 +41,15 @@ class AgendamentoForm(forms.ModelForm):
         # Formata as datas para o formato datetime-local ao editar
         if self.instance and self.instance.pk:
             if self.instance.data_inicio:
-                # Formato ISO 8601 (YYYY-MM-DDThh:mm)
-                data_inicio_fmt = self.instance.data_inicio.strftime(
-                    '%Y-%m-%dT%H:%M'
-                )
+                # Converte para timezone local antes de formatar
+                data_local = timezone.localtime(self.instance.data_inicio)
+                # Formato ISO 8601 (YYYY-MM-DDThh:mm) sem timezone
+                data_inicio_fmt = data_local.strftime('%Y-%m-%dT%H:%M')
                 self.initial['data_inicio'] = data_inicio_fmt
             if self.instance.data_fim:
-                data_fim_fmt = self.instance.data_fim.strftime(
-                    '%Y-%m-%dT%H:%M'
-                )
+                # Converte para timezone local antes de formatar
+                data_local = timezone.localtime(self.instance.data_fim)
+                data_fim_fmt = data_local.strftime('%Y-%m-%dT%H:%M')
                 self.initial['data_fim'] = data_fim_fmt
 
     def clean(self):
@@ -93,7 +94,8 @@ class AgendamentoForm(forms.ModelForm):
                     'veiculo': msg
                 })
 
-        # Validação de limite de KM do curso (só se já temos o total de KM dos trajetos)
+        # Validação de limite de KM do curso
+        # (só se já temos o total de KM dos trajetos)
         curso = cleaned_data.get('curso')
         if curso and data_inicio and hasattr(self, '_trajetos_km'):
             total_km_trajetos = self._trajetos_km
@@ -116,8 +118,9 @@ class AgendamentoForm(forms.ModelForm):
                     km_disponiveis = curso.limite_km_mensal - km_utilizados
                     raise ValidationError({
                         'curso': (
-                            f"Este agendamento ultrapassa o limite mensal de "
-                            f"{curso.limite_km_mensal} km do curso {curso.nome}. "
+                            f"Este agendamento ultrapassa o limite mensal "
+                            f"de {curso.limite_km_mensal} km do curso "
+                            f"{curso.nome}. "
                             f"KM já utilizados no mês: {km_utilizados} km. "
                             f"KM disponíveis: {km_disponiveis} km. "
                             f"KM solicitados: {total_km_trajetos} km."
@@ -200,14 +203,15 @@ class TrajetoForm(forms.ModelForm):
         # Formata as datas para o formato datetime-local ao editar
         if self.instance and self.instance.pk:
             if self.instance.data_saida:
-                data_saida_fmt = self.instance.data_saida.strftime(
-                    '%Y-%m-%dT%H:%M'
-                )
+                # Converte para timezone local antes de formatar
+                data_local = timezone.localtime(self.instance.data_saida)
+                data_saida_fmt = data_local.strftime('%Y-%m-%dT%H:%M')
                 self.initial['data_saida'] = data_saida_fmt
             if self.instance.data_chegada:
-                data_chegada_fmt = self.instance.data_chegada.strftime(
-                    '%Y-%m-%dT%H:%M'
-                )
+                # Converte para timezone local antes de formatar
+                data_local = timezone.localtime(self.instance.data_chegada)
+                data_chegada_fmt = data_local.strftime('%Y-%m-%dT%H:%M')
+                self.initial['data_chegada'] = data_chegada_fmt
                 self.initial['data_chegada'] = data_chegada_fmt
 
     def clean(self):
@@ -224,27 +228,6 @@ class TrajetoForm(forms.ModelForm):
             })
 
         # Validação 2: Trajeto deve estar dentro do período do agendamento
-        if hasattr(self, 'instance') and self.instance.agendamento_id:
-            agendamento = self.instance.agendamento
-
-            if data_saida and data_saida < agendamento.data_inicio:
-                data_fmt = agendamento.data_inicio.strftime("%d/%m/%Y %H:%M")
-                raise ValidationError({
-                    'data_saida': (
-                        f'A data de saída não pode ser anterior ao início '
-                        f'do agendamento ({data_fmt}).'
-                    )
-                })
-
-            if data_chegada and data_chegada > agendamento.data_fim:
-                data_fmt = agendamento.data_fim.strftime("%d/%m/%Y %H:%M")
-                raise ValidationError({
-                    'data_chegada': (
-                        f'A data de chegada não pode ser posterior ao fim '
-                        f'do agendamento ({data_fmt}).'
-                    )
-                })
-
         return cleaned_data
 
 

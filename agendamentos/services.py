@@ -92,6 +92,48 @@ class AgendamentoService:
 
         # Valida limite de KM
         form.validar_limite_km_manual(total_km_trajetos)
+        
+        # Valida se os trajetos estão dentro do período do agendamento
+        # usando os dados NOVOS do formulário (não os dados antigos do banco)
+        data_inicio = form.cleaned_data.get('data_inicio')
+        data_fim = form.cleaned_data.get('data_fim')
+        
+        for trajeto_form in formset:
+            if not trajeto_form.cleaned_data:
+                continue
+            if trajeto_form.cleaned_data.get('DELETE', False):
+                continue
+                
+            data_saida = trajeto_form.cleaned_data.get('data_saida')
+            data_chegada = trajeto_form.cleaned_data.get('data_chegada')
+            
+            if data_saida and data_inicio and data_saida < data_inicio:
+                data_fmt = data_inicio.strftime("%d/%m/%Y %H:%M")
+                raise ValidationError(
+                    f'A data de saída do trajeto não pode ser anterior '
+                    f'ao início do agendamento ({data_fmt}).'
+                )
+            
+            if data_saida and data_fim and data_saida > data_fim:
+                data_fmt = data_fim.strftime("%d/%m/%Y %H:%M")
+                raise ValidationError(
+                    f'A data de saída do trajeto não pode ser posterior '
+                    f'ao fim do agendamento ({data_fmt}).'
+                )
+            
+            if data_chegada and data_inicio and data_chegada < data_inicio:
+                data_fmt = data_inicio.strftime("%d/%m/%Y %H:%M")
+                raise ValidationError(
+                    f'A data de chegada do trajeto não pode ser anterior '
+                    f'ao início do agendamento ({data_fmt}).'
+                )
+            
+            if data_chegada and data_fim and data_chegada > data_fim:
+                data_fmt = data_fim.strftime("%d/%m/%Y %H:%M")
+                raise ValidationError(
+                    f'A data de chegada do trajeto não pode ser posterior '
+                    f'ao fim do agendamento ({data_fmt}).'
+                )
 
         # Atualiza o agendamento
         with transaction.atomic():
