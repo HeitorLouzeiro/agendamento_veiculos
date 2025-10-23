@@ -148,6 +148,21 @@ def detalhe_agendamento(request, pk):
     """Exibe detalhes de um agendamento."""
     agendamento = get_object_or_404(Agendamento, pk=pk)
 
+    # Verificar permissões de visualização:
+    # - Administradores podem ver tudo
+    # - Donos podem ver seus próprios agendamentos
+    # - Usuários comuns podem ver agendamentos aprovados de outros
+    is_owner = agendamento.professor == request.user
+    is_admin = request.user.is_administrador()
+    is_approved = agendamento.status == 'aprovado'
+
+    if not is_admin and not is_owner and not is_approved:
+        messages.error(
+            request,
+            'Você não tem permissão para visualizar este agendamento.'
+        )
+        return redirect('agendamentos:lista')
+
     # Verificar se pode editar
     can_edit = (
         request.user.is_administrador() or

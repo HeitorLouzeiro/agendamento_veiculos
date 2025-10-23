@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import render
 from django.utils import timezone
 
@@ -18,7 +19,26 @@ def dashboard(request):
         ano = timezone.now().year
 
     # Filtrar agendamentos do mês específico
-    agendamentos = Agendamento.objects.select_related(
+    # Administradores veem todos os agendamentos (exceto cancelados)
+    # Usuários comuns veem:
+    #   - Todos os agendamentos aprovados (para ver disponibilidade)
+    #   - Apenas seus próprios pendentes (não mostra cancelados)
+    # Usuários não autenticados veem apenas aprovados
+    
+    if not request.user.is_authenticated:
+        # Não autenticado: apenas aprovados
+        agendamentos = Agendamento.objects.filter(status='aprovado')
+    elif request.user.is_administrador():
+        # Admin: todos exceto cancelados
+        agendamentos = Agendamento.objects.exclude(status='reprovado')
+    else:
+        # Usuários comuns: aprovados de todos + seus próprios pendentes
+        agendamentos = Agendamento.objects.filter(
+            Q(status='aprovado') |
+            Q(professor=request.user, status='pendente')
+        )
+
+    agendamentos = agendamentos.select_related(
         'curso', 'professor', 'veiculo'
     ).filter(
         data_inicio__year=ano,
