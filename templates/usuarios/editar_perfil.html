@@ -92,6 +92,7 @@
                                 <i class="bi bi-telephone"></i> {{ form.telefone.label }}
                             </label>
                             {{ form.telefone }}
+                            <div class="form-text">Formato: (XX) XXXXX-XXXX</div>
                             {% if form.telefone.errors %}
                                 <div class="text-danger small">{{ form.telefone.errors }}</div>
                             {% endif %}
@@ -121,4 +122,32 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Formatação automática do telefone (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    document.getElementById('{{ form.telefone.id_for_label }}').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+        
+        if (value.length > 11) {
+            value = value.slice(0, 11); // Limita a 11 dígitos
+        }
+        
+        // Formata o telefone
+        if (value.length > 10) {
+            // Formato: (XX) XXXXX-XXXX
+            value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+        } else if (value.length > 6) {
+            // Formato: (XX) XXXX-XXXX
+            value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            // Formato: (XX) XXXX
+            value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+        } else if (value.length > 0) {
+            // Formato: (XX
+            value = value.replace(/^(\d*)/, '($1');
+        }
+        
+        e.target.value = value;
+    });
+</script>
 {% endblock %}

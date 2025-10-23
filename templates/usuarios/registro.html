@@ -60,6 +60,7 @@
                         <div class="mb-3">
                             <label for="{{ form.telefone.id_for_label }}" class="form-label">{{ form.telefone.label }}</label>
                             {{ form.telefone }}
+                            <div class="form-text">{{ form.telefone.help_text }}</div>
                             {% if form.telefone.errors %}
                             <div class="text-danger small">{{ form.telefone.errors }}</div>
                             {% endif %}
@@ -157,6 +158,32 @@
     // Converte username para minúsculas automaticamente
     document.getElementById('{{ form.username.id_for_label }}').addEventListener('input', function(e) {
         this.value = this.value.toLowerCase();
+    });
+    
+    // Formatação automática do telefone (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    document.getElementById('{{ form.telefone.id_for_label }}').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+        
+        if (value.length > 11) {
+            value = value.slice(0, 11); // Limita a 11 dígitos
+        }
+        
+        // Formata o telefone
+        if (value.length > 10) {
+            // Formato: (XX) XXXXX-XXXX
+            value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+        } else if (value.length > 6) {
+            // Formato: (XX) XXXX-XXXX
+            value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            // Formato: (XX) XXXX
+            value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+        } else if (value.length > 0) {
+            // Formato: (XX
+            value = value.replace(/^(\d*)/, '($1');
+        }
+        
+        e.target.value = value;
     });
 </script>
 {% endblock %}
