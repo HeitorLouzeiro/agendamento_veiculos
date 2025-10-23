@@ -318,7 +318,21 @@ $(document).ready(function() {
             }
         });
         newForm.find('h6').text('Trajeto ' + (trajetoIndex + 1));
-        newForm.find('.remove-trajeto').show();
+        
+        // Garantir que o botão de remover existe e está visível
+        let removeBtn = newForm.find('.remove-trajeto');
+        if (removeBtn.length === 0) {
+            // Se o botão não existe, criar um
+            newForm.find('.d-flex.justify-content-between').append(
+                '<button type="button" class="btn btn-sm btn-outline-danger remove-trajeto">' +
+                '<i class="bi bi-trash"></i> Remover' +
+                '</button>'
+            );
+        } else {
+            // Se existe, garantir que está visível
+            removeBtn.show();
+        }
+        
         newForm.find('.alert-warning-dates').remove(); // Remove alertas do form clonado
         $('#trajetos-container').append(newForm);
         $('#id_trajetos-TOTAL_FORMS').val(trajetoIndex + 1);
