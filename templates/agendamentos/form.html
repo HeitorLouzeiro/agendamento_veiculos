@@ -68,7 +68,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="mb-0">Trajeto {{ forloop.counter }}</h6>
-                                {% if not forloop.first %}
+                                {% if is_edit or not forloop.first %}
                                 <button type="button" class="btn btn-sm btn-outline-danger remove-trajeto">
                                     <i class="bi bi-trash"></i> Remover
                                 </button>
@@ -76,7 +76,9 @@
                             </div>
                             
                             {{ form.id }}
-                            {{ form.DELETE }}
+                            <div style="display: none;">
+                                {{ form.DELETE }}
+                            </div>
                             
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -172,19 +174,52 @@ $(document).ready(function() {
         
         let erros = [];
         
+        // Converter strings para objetos Date para comparação correta
+        const dataInicioObj = dataInicio ? new Date(dataInicio) : null;
+        const dataFimObj = dataFim ? new Date(dataFim) : null;
+        const dataSaidaObj = dataSaida ? new Date(dataSaida) : null;
+        const dataChegadaObj = dataChegada ? new Date(dataChegada) : null;
+        
+        // Formatar datas para exibição
+        function formatarData(dateObj) {
+            if (!dateObj) return '';
+            const dia = String(dateObj.getDate()).padStart(2, '0');
+            const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const ano = dateObj.getFullYear();
+            const hora = String(dateObj.getHours()).padStart(2, '0');
+            const min = String(dateObj.getMinutes()).padStart(2, '0');
+            return `${dia}/${mes}/${ano} ${hora}:${min}`;
+        }
+        
         // Validação 1: Data de chegada deve ser posterior à data de saída
-        if (dataSaida && dataChegada && dataChegada <= dataSaida) {
+        if (dataSaidaObj && dataChegadaObj && dataChegadaObj <= dataSaidaObj) {
             erros.push('A data de chegada deve ser posterior à data de saída.');
         }
         
-        // Validação 2: Data de saída não pode ser anterior ao início do agendamento
-        if (dataInicio && dataSaida && dataSaida < dataInicio) {
-            erros.push('A data de saída não pode ser anterior ao início do agendamento.');
+        // Validação 2: Data de saída deve estar dentro do período do agendamento
+        if (dataInicioObj && dataSaidaObj) {
+            if (dataSaidaObj < dataInicioObj) {
+                erros.push(`A data de saída não pode ser anterior ao início do agendamento (${formatarData(dataInicioObj)}).`);
+            }
         }
         
-        // Validação 3: Data de chegada não pode ser posterior ao fim do agendamento
-        if (dataFim && dataChegada && dataChegada > dataFim) {
-            erros.push('A data de chegada não pode ser posterior ao fim do agendamento.');
+        if (dataFimObj && dataSaidaObj) {
+            if (dataSaidaObj > dataFimObj) {
+                erros.push(`A data de saída não pode ser posterior ao fim do agendamento (${formatarData(dataFimObj)}).`);
+            }
+        }
+        
+        // Validação 3: Data de chegada deve estar dentro do período do agendamento
+        if (dataInicioObj && dataChegadaObj) {
+            if (dataChegadaObj < dataInicioObj) {
+                erros.push(`A data de chegada não pode ser anterior ao início do agendamento (${formatarData(dataInicioObj)}).`);
+            }
+        }
+        
+        if (dataFimObj && dataChegadaObj) {
+            if (dataChegadaObj > dataFimObj) {
+                erros.push(`A data de chegada não pode ser posterior ao fim do agendamento (${formatarData(dataFimObj)}).`);
+            }
         }
         
         return erros;
@@ -216,21 +251,58 @@ $(document).ready(function() {
     $('#agendamentoForm').on('submit', function(e) {
         let temErros = false;
         
+        // Primeiro, remove todos os alertas antigos
+        $('.alert-warning-dates').remove();
+        
         $('.trajeto-form:visible').each(function() {
             const trajetoForm = $(this);
+            
+            // Pular se o trajeto está marcado para deletar
+            const isDeleted = trajetoForm.find('input[name$="-DELETE"]').is(':checked');
+            if (isDeleted) {
+                return true; // continua para próximo trajeto
+            }
+            
+            // Verificar se o trajeto tem pelo menos um campo preenchido
+            const origem = trajetoForm.find('input[name$="-origem"]').val();
+            const destino = trajetoForm.find('input[name$="-destino"]').val();
+            const dataSaida = trajetoForm.find('input[name$="-data_saida"]').val();
+            const dataChegada = trajetoForm.find('input[name$="-data_chegada"]').val();
+            const quilometragem = trajetoForm.find('input[name$="-quilometragem"]').val();
+            
+            // Se o trajeto está completamente vazio, pular validação
+            if (!origem && !destino && !dataSaida && !dataChegada && !quilometragem) {
+                return true; // continua para próximo trajeto
+            }
+            
+            // Se há dados preenchidos, validar
             const erros = validarDatasTrajeto(trajetoForm);
             
             if (erros.length > 0) {
                 temErros = true;
+                
+                // Criar e mostrar o alerta visual
+                let alertHtml = '<div class="alert alert-warning alert-warning-dates mt-2 mb-0">';
+                alertHtml += '<i class="bi bi-exclamation-triangle-fill"></i> <strong>Atenção:</strong><ul class="mb-0 mt-1">';
+                erros.forEach(erro => {
+                    alertHtml += '<li>' + erro + '</li>';
+                });
+                alertHtml += '</ul></div>';
+                trajetoForm.find('.card-body').append(alertHtml);
             }
         });
         
         if (temErros) {
             e.preventDefault();
             alert('Por favor, corrija os erros nos trajetos antes de salvar.');
-            $('html, body').animate({
-                scrollTop: $('.alert-warning-dates:first').offset().top - 100
-            }, 500);
+            
+            // Scroll para o primeiro alerta, se existir
+            const firstAlert = $('.alert-warning-dates:first');
+            if (firstAlert.length > 0) {
+                $('html, body').animate({
+                    scrollTop: firstAlert.offset().top - 100
+                }, 500);
+            }
         }
     });
     
