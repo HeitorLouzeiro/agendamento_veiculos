@@ -39,7 +39,9 @@ class Veiculo(models.Model):
 
     def tem_conflito(self, data_inicio, data_fim, agendamento_id=None):
         """
-        Verifica se há conflito de agendamento para este veículo no período especificado.
+        Verifica se há conflito de agendamento para este veículo
+        no período especificado.
+        Apenas agendamentos aprovados são considerados conflitos reais.
 
         Args:
             data_inicio: Data/hora de início do agendamento
@@ -54,10 +56,10 @@ class Veiculo(models.Model):
         from agendamentos.models import Agendamento
 
         # Query para verificar sobreposição de datas
+        # Apenas agendamentos APROVADOS geram conflito
         conflitos = Agendamento.objects.filter(
             veiculo=self,
-            # Considera pendentes e aprovados
-            status__in=['pendente', 'aprovado']
+            status='aprovado'  # Apenas aprovados bloqueiam o veículo
         ).filter(
             Q(data_inicio__lt=data_fim) & Q(data_fim__gt=data_inicio)
         )
@@ -69,14 +71,18 @@ class Veiculo(models.Model):
         return conflitos.exists()
 
     def get_agendamentos_periodo(self, data_inicio, data_fim):
-        """Retorna agendamentos do veículo em um período"""
+        """
+        Retorna agendamentos aprovados do veículo em um período.
+        Apenas agendamentos aprovados são considerados para verificação
+        de conflito.
+        """
         from django.db.models import Q
 
         from agendamentos.models import Agendamento
 
         return Agendamento.objects.filter(
             veiculo=self,
-            status__in=['pendente', 'aprovado']
+            status='aprovado'  # Apenas aprovados
         ).filter(
             Q(data_inicio__lt=data_fim) & Q(data_fim__gt=data_inicio)
         ).order_by('data_inicio')
