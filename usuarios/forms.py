@@ -1,5 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import SetPasswordForm, UserCreationForm
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 from .models import Usuario
 
@@ -86,6 +88,9 @@ class RegistroForm(UserCreationForm):
                 field.help_text = (
                     'Digite a mesma senha novamente para verificação.'
                 )
+            elif field_name == 'telefone':
+                field.widget.attrs['placeholder'] = '(00) 00000-0000'
+                field.help_text = 'Formato: (XX) XXXXX-XXXX'
 
     def clean_username(self):
         """Converte username para minúsculas e valida unicidade"""
@@ -112,6 +117,14 @@ class RegistroForm(UserCreationForm):
                 )
             return email
         return email
+
+    def clean_telefone(self):
+        """Remove formatação do telefone antes de salvar"""
+        telefone = self.cleaned_data.get('telefone')
+        if telefone:
+            # Remove todos os caracteres que não são dígitos
+            telefone = ''.join(filter(str.isdigit, telefone))
+        return telefone
 
     def clean(self):
         cleaned_data = super().clean()
@@ -275,7 +288,11 @@ class EditarPerfilForm(forms.ModelForm):
     telefone = forms.CharField(
         label='Telefone',
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '(00) 00000-0000'
+        }),
+        help_text='Formato: (XX) XXXXX-XXXX'
     )
 
     class Meta:
@@ -285,6 +302,26 @@ class EditarPerfilForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
+        # Formata o telefone ao carregar para exibição
+        if self.instance and self.instance.telefone:
+            telefone = self.instance.telefone
+            # Remove formatação existente
+            telefone_limpo = ''.join(filter(str.isdigit, telefone))
+            
+            # Aplica formatação
+            if len(telefone_limpo) == 11:
+                # (XX) XXXXX-XXXX
+                self.initial['telefone'] = (
+                    f'({telefone_limpo[:2]}) '
+                    f'{telefone_limpo[2:7]}-{telefone_limpo[7:]}'
+                )
+            elif len(telefone_limpo) == 10:
+                # (XX) XXXX-XXXX
+                self.initial['telefone'] = (
+                    f'({telefone_limpo[:2]}) '
+                    f'{telefone_limpo[2:6]}-{telefone_limpo[6:]}'
+                )
 
     def clean_email(self):
         """Valida se o e-mail já existe (exceto o próprio usuário)"""
@@ -299,6 +336,14 @@ class EditarPerfilForm(forms.ModelForm):
                 raise forms.ValidationError('Este e-mail já está cadastrado.')
             return email
         return email
+
+    def clean_telefone(self):
+        """Remove formatação do telefone antes de salvar"""
+        telefone = self.cleaned_data.get('telefone')
+        if telefone:
+            # Remove todos os caracteres que não são dígitos
+            telefone = ''.join(filter(str.isdigit, telefone))
+        return telefone
 
 
 class AlterarSenhaForm(forms.Form):
@@ -317,7 +362,10 @@ class AlterarSenhaForm(forms.Form):
             'placeholder': 'Digite sua nova senha'
         }),
         min_length=8,
-        help_text='Sua senha deve conter pelo menos 8 caracteres.'
+        help_text=(
+            'Sua senha deve conter pelo menos 8 caracteres e não pode ser '
+            'muito comum ou inteiramente numérica.'
+        )
     )
     confirmar_senha = forms.CharField(
         label='Confirmar Nova Senha',
@@ -337,6 +385,17 @@ class AlterarSenhaForm(forms.Form):
         if self.user and not self.user.check_password(senha_atual):
             raise forms.ValidationError('Senha atual incorreta.')
         return senha_atual
+
+    def clean_nova_senha(self):
+        """Valida a força da nova senha"""
+        nova_senha = self.cleaned_data.get('nova_senha')
+        if nova_senha and self.user:
+            try:
+                # Usa os validadores de senha do Django
+                validate_password(nova_senha, self.user)
+            except DjangoValidationError as e:
+                raise forms.ValidationError(e.messages)
+        return nova_senha
 
     def clean(self):
         cleaned_data = super().clean()
