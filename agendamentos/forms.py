@@ -85,8 +85,8 @@ class AgendamentoForm(forms.ModelForm):
                     conflitos = conflitos.exclude(id=agendamento_id)
 
                 msg = (
-                    f"O veículo {veiculo.placa} já está "
-                    f"agendado neste período:"
+                    f"O veículo {veiculo.placa} tem um "
+                    f"agendamento neste período:"
                 )
                 for conflito in conflitos:
                     dt_inicio = conflito.data_inicio.strftime(
@@ -95,7 +95,6 @@ class AgendamentoForm(forms.ModelForm):
                     dt_fim = conflito.data_fim.strftime('%d/%m/%Y %H:%M')
                     msg += (
                         f"\n- {dt_inicio} até {dt_fim} "
-                        f"({conflito.curso.nome})"
                     )
 
                 raise ValidationError({
@@ -107,21 +106,21 @@ class AgendamentoForm(forms.ModelForm):
         curso = cleaned_data.get('curso')
         if curso and data_inicio and hasattr(self, '_trajetos_km'):
             total_km_trajetos = self._trajetos_km
-            
+
             if total_km_trajetos > 0:  # Só valida se há KM para validar
                 ano = data_inicio.year
                 mes = data_inicio.month
-                
+
                 # Calcula KM já utilizados no mês
                 km_utilizados = curso.get_km_utilizados_mes(ano, mes)
-                
+
                 # Se estiver editando, subtrai os KM antigos deste agendamento
                 if self.instance and self.instance.id:
                     km_utilizados -= self.instance.get_total_km()
-                
+
                 # Verifica se excede o limite
                 km_total = km_utilizados + total_km_trajetos
-                
+
                 if km_total > curso.limite_km_mensal:
                     km_disponiveis = curso.limite_km_mensal - km_utilizados
                     raise ValidationError({
@@ -136,11 +135,11 @@ class AgendamentoForm(forms.ModelForm):
                     })
 
         return cleaned_data
-    
+
     def set_trajetos_km(self, total_km):
         """Método para definir o total de KM dos trajetos para validação"""
         self._trajetos_km = total_km
-    
+
     def validar_limite_km_manual(self, total_km_trajetos):
         """
         Valida manualmente o limite de KM do curso.
@@ -148,24 +147,24 @@ class AgendamentoForm(forms.ModelForm):
         """
         if not self.cleaned_data:
             return
-            
+
         curso = self.cleaned_data.get('curso')
         data_inicio = self.cleaned_data.get('data_inicio')
-        
+
         if curso and data_inicio and total_km_trajetos > 0:
             ano = data_inicio.year
             mes = data_inicio.month
-            
+
             # Calcula KM já utilizados no mês
             km_utilizados = curso.get_km_utilizados_mes(ano, mes)
-            
+
             # Se estiver editando, subtrai os KM antigos deste agendamento
             if self.instance and self.instance.id:
                 km_utilizados -= self.instance.get_total_km()
-            
+
             # Verifica se excede o limite
             km_total = km_utilizados + total_km_trajetos
-            
+
             if km_total > curso.limite_km_mensal:
                 km_disponiveis = curso.limite_km_mensal - km_utilizados
                 raise ValidationError(

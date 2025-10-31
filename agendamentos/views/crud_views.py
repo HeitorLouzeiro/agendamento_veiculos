@@ -151,12 +151,11 @@ def detalhe_agendamento(request, pk):
     # Verificar permissões de visualização:
     # - Administradores podem ver tudo
     # - Donos podem ver seus próprios agendamentos
-    # - Usuários comuns podem ver agendamentos aprovados de outros
+    # - Outros professores não podem ver detalhes
     is_owner = agendamento.professor == request.user
     is_admin = request.user.is_administrador()
-    is_approved = agendamento.status == 'aprovado'
 
-    if not is_admin and not is_owner and not is_approved:
+    if not is_admin and not is_owner:
         messages.error(
             request,
             'Você não tem permissão para visualizar este agendamento.'

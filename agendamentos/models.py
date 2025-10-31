@@ -94,9 +94,12 @@ class Agendamento(models.Model):
                     if self.id:
                         conflitos = conflitos.exclude(id=self.id)
 
-                    mensagem = f"O veículo {veiculo.placa} já está agendado neste período:"
+                    mensagem = f"O veículo {veiculo.placa} tem um agendamento neste período:"
                     for conflito in conflitos:
-                        mensagem += f"\n- {conflito.data_inicio.strftime('%d/%m/%Y %H:%M')} até {conflito.data_fim.strftime('%d/%m/%Y %H:%M')} ({conflito.curso.nome})"
+                        data_inicio = conflito.data_inicio.strftime(
+                            '%d/%m/%Y %H:%M')
+                        data_fim = conflito.data_fim.strftime('%d/%m/%Y %H:%M')
+                        mensagem += f"\n- {data_inicio} até {data_fim}"
 
                     raise ValidationError({
                         'veiculo': mensagem

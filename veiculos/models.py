@@ -1,6 +1,9 @@
 import uuid
 
 from django.db import models
+from django.db.models import Q
+
+from agendamentos.models import Agendamento
 
 
 class Veiculo(models.Model):
@@ -41,7 +44,8 @@ class Veiculo(models.Model):
         """
         Verifica se há conflito de agendamento para este veículo
         no período especificado.
-        Apenas agendamentos aprovados são considerados conflitos reais.
+        Agendamentos aprovados E pendentes são considerados conflitos,
+        pois o veículo fica reservado enquanto aguarda aprovação.
 
         Args:
             data_inicio: Data/hora de início do agendamento
@@ -51,15 +55,13 @@ class Veiculo(models.Model):
         Returns:
             True se houver conflito, False caso contrário
         """
-        from django.db.models import Q
-
-        from agendamentos.models import Agendamento
 
         # Query para verificar sobreposição de datas
-        # Apenas agendamentos APROVADOS geram conflito
+        # Agendamentos APROVADOS e PENDENTES bloqueiam o veículo
         conflitos = Agendamento.objects.filter(
             veiculo=self,
-            status='aprovado'  # Apenas aprovados bloqueiam o veículo
+            # Aprovados e pendentes bloqueiam
+            status__in=['aprovado', 'pendente']
         ).filter(
             Q(data_inicio__lt=data_fim) & Q(data_fim__gt=data_inicio)
         )
@@ -72,17 +74,14 @@ class Veiculo(models.Model):
 
     def get_agendamentos_periodo(self, data_inicio, data_fim):
         """
-        Retorna agendamentos aprovados do veículo em um período.
-        Apenas agendamentos aprovados são considerados para verificação
-        de conflito.
+        Retorna agendamentos aprovados e pendentes do veículo em um período.
+        Agendamentos aprovados e pendentes são considerados para verificação
+        de conflito, pois o veículo fica reservado enquanto aguarda decisão.
         """
-        from django.db.models import Q
-
-        from agendamentos.models import Agendamento
 
         return Agendamento.objects.filter(
             veiculo=self,
-            status='aprovado'  # Apenas aprovados
+            status__in=['aprovado', 'pendente']  # Aprovados e pendentes
         ).filter(
             Q(data_inicio__lt=data_fim) & Q(data_fim__gt=data_inicio)
         ).order_by('data_inicio')

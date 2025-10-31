@@ -5,31 +5,31 @@ Este módulo fornece dados em formato JSON para integração com
 bibliotecas de calendário front-end.
 """
 
+from django.db.models import Q
 from django.http import JsonResponse
 
 from ..models import Agendamento
-from django.db.models import Q
 
 
 def agendamentos_json(request):
     """Retorna agendamentos em formato JSON para o calendário."""
-    # Administradores veem todos os agendamentos (exceto cancelados)
+    # Administradores veem todos os agendamentos (exceto reprovados)
     # Usuários comuns veem:
-    #   - Todos os agendamentos aprovados (para ver disponibilidade)
-    #   - Apenas seus próprios pendentes (não mostra cancelados)
+    #   - Todos os agendamentos aprovados e pendentes
+    #     (para ver disponibilidade e conflitos de veículos)
+    #   - Não veem detalhes de agendamentos pendentes de outros
     # Usuários não autenticados veem apenas aprovados
-    
+
     if not request.user.is_authenticated:
         # Não autenticado: apenas aprovados
         agendamentos = Agendamento.objects.filter(status='aprovado')
     elif request.user.is_administrador():
-        # Admin: todos exceto cancelados
+        # Admin: todos exceto reprovados
         agendamentos = Agendamento.objects.exclude(status='reprovado')
     else:
-        # Usuários comuns: aprovados de todos + seus próprios pendentes
+        # Usuários comuns: aprovados e pendentes de todos
         agendamentos = Agendamento.objects.filter(
-            Q(status='aprovado') |
-            Q(professor=request.user, status='pendente')
+            Q(status='aprovado') | Q(status='pendente')
         )
 
     agendamentos = agendamentos.select_related(
@@ -48,37 +48,49 @@ def agendamentos_json(request):
         color = cores_status.get(agendamento.status, '#6c757d')
 
         if request.user.is_authenticated:
-            # Usuário logado - informações completas
+            # Usuário logado
             is_owner = agendamento.professor == request.user
             is_admin = request.user.is_administrador()
 
-            title = (
-                f"{agendamento.curso.nome} - {agendamento.veiculo.placa}"
-            )
+            # Se não é admin e não é dono, mostra info limitada
             if not is_owner and not is_admin:
-                prof_name = (
-                    agendamento.professor.get_full_name() or
-                    agendamento.professor.username
-                )
-                title += f" ({prof_name})"
-
-            evento = {
-                'id': agendamento.id,
-                'title': title,
-                'start': agendamento.data_inicio.isoformat(),
-                'end': agendamento.data_fim.isoformat(),
-                'color': color,
-                'url': f'/agendamentos/{agendamento.id}/',
-                'extendedProps': {
-                    'is_owner': is_owner,
-                    'can_edit': is_admin or is_owner,
-                    'professor_name': (
-                        agendamento.professor.get_full_name() or
-                        agendamento.professor.username
-                    ),
-                    'status': agendamento.status
+                evento = {
+                    'id': agendamento.id,
+                    'title': f"{agendamento.veiculo.placa} - Reservado",
+                    'start': agendamento.data_inicio.isoformat(),
+                    'end': agendamento.data_fim.isoformat(),
+                    'color': color,
+                    'extendedProps': {
+                        'is_owner': False,
+                        'can_edit': False,
+                        'can_view': False,
+                        'status': agendamento.status
+                    }
                 }
-            }
+            else:
+                # Informações completas (admin ou dono)
+                title = (
+                    f"{agendamento.curso.nome} - {agendamento.veiculo.placa}"
+                )
+
+                evento = {
+                    'id': agendamento.id,
+                    'title': title,
+                    'start': agendamento.data_inicio.isoformat(),
+                    'end': agendamento.data_fim.isoformat(),
+                    'color': color,
+                    'url': f'/agendamentos/{agendamento.id}/',
+                    'extendedProps': {
+                        'is_owner': is_owner,
+                        'can_edit': is_admin or is_owner,
+                        'can_view': True,
+                        'professor_name': (
+                            agendamento.professor.get_full_name() or
+                            agendamento.professor.username
+                        ),
+                        'status': agendamento.status
+                    }
+                }
         else:
             # Usuário não logado - informações básicas
             evento = {
