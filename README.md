@@ -31,7 +31,7 @@ O **Sistema de Agendamento de Veículos** é uma aplicação web desenvolvida em
 - 📅 Agendamento de veículos com seleção de data/hora
 - 📊 Visualização de agendamentos em calendário
 - 🔍 Acompanhamento de status (Pendente/Aprovado/Reprovado)
-- 📱 Notificações por email sobre mudanças de status
+- 📱 Ativação de conta via e-mail
 
 #### Para Administradores
 - 👥 Gestão completa de usuários
@@ -88,7 +88,6 @@ agendamento_veiculos/
 - **Bootstrap** (implícito) - Framework CSS responsivo
 
 ### Bibliotecas Python
-- **Pillow** - Processamento de imagens
 - **openpyxl/xlsxwriter** - Exportação Excel
 - **ReportLab** - Geração de PDFs
 - **python-decouple** - Gerenciamento de configurações
@@ -96,7 +95,6 @@ agendamento_veiculos/
 
 ### DevOps
 - **Docker & Docker Compose** - Containerização
-- **GitHub Actions** (potencial) - CI/CD
 
 ---
 
@@ -415,7 +413,7 @@ print(get_random_secret_key())
 #### **Usuario** (usuários/)
 - Herda de `AbstractUser` do Django
 - Campos: `username`, `email`, `tipo_usuario` (professor/administrador)
-- Email institucional obrigatório: `@*.uespi.br`
+- Email institucional obrigatório: `@*.uespi.br` ou  `@uespi.br`
 - Ativação de conta via email
 
 #### **Veiculo** (veiculos/)
@@ -447,7 +445,6 @@ print(get_random_secret_key())
 
 ### Configuração
 - [EMAIL_CONFIG.md](EMAIL_CONFIG.md) - Configuração detalhada de email
-- [LICENSE](LICENSE) - Licença do projeto
 
 ### Links Externos
 - [Documentação Django](https://docs.djangoproject.com/)
