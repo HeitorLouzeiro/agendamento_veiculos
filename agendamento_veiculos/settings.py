@@ -160,17 +160,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Configuração para diferentes ambientes
-if os.getenv('DB_ENGINE') == 'postgresql':
-    # Produção/Docker: apenas adicionar diretório se existir
-    static_dir = BASE_DIR / 'static'
-    if static_dir.exists():
-        STATICFILES_DIRS = [static_dir]
-    else:
-        STATICFILES_DIRS = []
-else:
-    # Desenvolvimento local: usar diretório static diretamente
-    STATICFILES_DIRS = [BASE_DIR / 'static']
+static_dir = BASE_DIR / 'static'
+STATICFILES_DIRS = [static_dir] if static_dir.exists() else []
 
 # Configuração do WhiteNoise para servir arquivos estáticos
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

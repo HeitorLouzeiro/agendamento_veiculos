@@ -136,9 +136,8 @@ Thumbs.db
 # Media files (opcional - descomente se quiser ignorar uploads)
 media/
 
-# Static files (opcional - descomente se quiser ignorar arquivos estáticos coletados)
+# Static files coletados (gerado automaticamente, não versionar)
 staticfiles/
-static/
 
 # Docker
 .dockerignore
