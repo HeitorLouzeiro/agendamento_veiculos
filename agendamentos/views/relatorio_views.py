@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from common.constants import (AGENDAMENTOS_RELATORIO_POR_PAGINA,
                               PROFESSORES_POR_PAGINA, VEICULOS_POR_PAGINA)
-from common.decorators import is_administrador
+from common.decorators import is_administrador, is_responsavel_ou_admin
 from common.pagination import PaginationHelper
 from cursos.models import Curso
 
@@ -24,7 +24,7 @@ from ..view_helpers import (obter_opcoes_filtros,
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def relatorio_geral(request):
     """Relatório geral do sistema de agendamentos."""
     # Obter parâmetros
@@ -37,6 +37,11 @@ def relatorio_geral(request):
         data_inicio__year=ano,
         data_inicio__month=mes
     ).select_related('curso', 'professor', 'veiculo')
+
+    if not request.user.is_administrador():
+        agendamentos = agendamentos.filter(
+            professor__campus=request.user.campus
+        )
 
     # Aplicar filtros usando service
     filtros = {
@@ -101,7 +106,7 @@ def relatorio_geral(request):
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def relatorio_por_curso(request):
     """Relatório detalhado por curso."""
     # Obter parâmetros
@@ -146,15 +151,18 @@ def relatorio_por_curso(request):
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def relatorio_por_professor(request):
     """Gera relatório detalhado por professor específico."""
     from usuarios.models import Usuario
 
     # Obter lista de professores
     professores = Usuario.objects.filter(
-        tipo_usuario='professor'
+        groups__name='Professores'
     ).order_by('first_name', 'last_name')
+
+    if not request.user.is_administrador():
+        professores = professores.filter(campus=request.user.campus)
 
     # Obter filtros
     professor_id = request.GET.get('professor')
@@ -171,7 +179,7 @@ def relatorio_por_professor(request):
         try:
             professor_selecionado = Usuario.objects.get(
                 id=professor_id,
-                tipo_usuario='professor'
+                groups__name='Professores'
             )
 
             # Filtrar agendamentos

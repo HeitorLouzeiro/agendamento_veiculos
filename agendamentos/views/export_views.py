@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 
 from common.constants import NOMES_MESES
-from common.decorators import is_administrador
+from common.decorators import is_responsavel_ou_admin
 from cursos.models import Curso
 
 from ..exports.excel_exporter import (AgendamentosExcelExporter,
@@ -27,7 +27,7 @@ from ..view_helpers import (preparar_dados_exportacao_geral,
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def exportar_relatorio_excel(request):
     """Exporta relatório geral em Excel."""
     # Obter parâmetros
@@ -40,6 +40,11 @@ def exportar_relatorio_excel(request):
         data_inicio__year=ano,
         data_inicio__month=mes
     ).select_related('curso', 'professor', 'veiculo')
+
+    if not request.user.is_administrador():
+        agendamentos = agendamentos.filter(
+            professor__campus=request.user.campus
+        )
 
     # Aplicar filtros usando service
     filtros = {
@@ -67,7 +72,7 @@ def exportar_relatorio_excel(request):
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def exportar_relatorio_pdf(request):
     """Exporta relatório geral em PDF."""
     # Obter parâmetros
@@ -80,6 +85,11 @@ def exportar_relatorio_pdf(request):
         data_inicio__year=ano,
         data_inicio__month=mes
     ).select_related('curso', 'professor', 'veiculo')
+
+    if not request.user.is_administrador():
+        agendamentos = agendamentos.filter(
+            professor__campus=request.user.campus
+        )
 
     # Aplicar filtros usando service
     filtros = {
@@ -105,7 +115,7 @@ def exportar_relatorio_pdf(request):
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def exportar_curso_excel(request):
     """Exporta relatório por curso em Excel."""
     # Obter parâmetros
@@ -133,7 +143,7 @@ def exportar_curso_excel(request):
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def exportar_professor_excel(request):
     """Exporta relatório por professor em Excel."""
     from usuarios.models import Usuario
@@ -147,7 +157,7 @@ def exportar_professor_excel(request):
     professor = get_object_or_404(
         Usuario,
         id=professor_id,
-        tipo_usuario='professor'
+        groups__name='Professores'
     )
 
     # Filtrar agendamentos
@@ -179,7 +189,7 @@ def exportar_professor_excel(request):
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def exportar_professor_pdf(request):
     """Exporta relatório por professor em PDF."""
     from usuarios.models import Usuario
@@ -193,7 +203,7 @@ def exportar_professor_pdf(request):
     professor = get_object_or_404(
         Usuario,
         id=professor_id,
-        tipo_usuario='professor'
+        groups__name='Professores'
     )
 
     # Filtrar agendamentos

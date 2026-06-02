@@ -318,7 +318,7 @@ class RelatorioService:
         """
         professores_stats_list = []
         professores = Usuario.objects.filter(
-            tipo_usuario='professor'
+            groups__name='Professores'
         ).order_by('first_name', 'last_name')
 
         for professor in professores:

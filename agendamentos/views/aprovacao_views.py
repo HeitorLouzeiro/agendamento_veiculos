@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from common.constants import AGENDAMENTOS_APROVACAO_POR_PAGINA
-from common.decorators import is_administrador
+from common.decorators import is_responsavel_ou_admin
 from common.pagination import PaginationHelper
 from cursos.models import Curso
 
@@ -20,13 +20,18 @@ from ..services import AgendamentoService, RelatorioService
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def aprovacao_agendamentos(request):
     """Lista agendamentos pendentes para aprovação."""
     # Buscar apenas agendamentos pendentes
     agendamentos = Agendamento.objects.filter(
         status='pendente'
     ).select_related('curso', 'professor', 'veiculo')
+
+    if not request.user.is_administrador():
+        agendamentos = agendamentos.filter(
+            professor__campus=request.user.campus
+        )
 
     # Aplicar filtros usando service
     filtros = {
@@ -56,7 +61,7 @@ def aprovacao_agendamentos(request):
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def aprovar_agendamento(request, pk):
     """Aprova um agendamento."""
     agendamento = get_object_or_404(Agendamento, pk=pk)
@@ -84,7 +89,7 @@ def aprovar_agendamento(request, pk):
 
 
 @login_required
-@user_passes_test(is_administrador)
+@user_passes_test(is_responsavel_ou_admin)
 def reprovar_agendamento(request, pk):
     """Reprova um agendamento."""
     agendamento = get_object_or_404(Agendamento, pk=pk)

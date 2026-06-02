@@ -239,7 +239,7 @@ def preparar_dados_exportacao_geral(agendamentos, ano, mes, filtros):
 
     # Professores com KM (para PDF)
     professores_km = Usuario.objects.filter(
-        tipo_usuario='professor',
+        groups__name='Professores',
         agendamentos__in=agendamentos_aprovados
     ).annotate(
         total_km=Sum('agendamentos__trajetos__quilometragem'),
