@@ -344,6 +344,96 @@ python manage.py check
 python manage.py clearsessions
 ```
 
+### 🗄️ Comandos de Dados
+
+#### `create_data_load` — dados fixos para desenvolvimento
+Cria um conjunto mínimo e previsível de dados. Não aceita argumentos. Idempotente (pode rodar várias vezes sem duplicar).
+
+```bash
+python manage.py create_data_load
+```
+
+O que é criado:
+
+| Tipo | Qtd | Detalhes |
+|---|---|---|
+| Campi | 2 | Teresina, Parnaíba |
+| Administradores | 1 | — |
+| Responsáveis de Campus | 2 | um por campus |
+| Professores | 3 | distribuídos nos campi |
+| Motoristas | 2 | um por campus |
+| Cursos | 5 | com `campus` associado |
+| Veículos | 3 | com `campus` associado |
+| Agendamentos | 6 | pendente / aprovado / reprovado |
+| Abastecimentos | 5 | — |
+| Ocorrências | 3 | — |
+
+**Credenciais criadas:**
+
+| Username | Email | Senha | Perfil | Campus |
+|---|---|---|---|---|
+| `admin` | `admin@uespi.br` | `admin123` | Administrador | — |
+| `resp01` | `resp01@uespi.br` | `resp123` | Responsável de Campus | Campus Torquato Neto (Teresina) |
+| `resp02` | `resp02@uespi.br` | `resp123` | Responsável de Campus | Campus Alexandre Alves de Oliveira (Parnaíba) |
+| `prof01` | `prof01@uespi.br` | `senha123` | Professor | Campus Torquato Neto |
+| `prof02` | `prof02@uespi.br` | `senha123` | Professor | Campus Torquato Neto |
+| `prof03` | `prof03@uespi.br` | `senha123` | Professor | Campus Alexandre Alves de Oliveira |
+| `motor01` | `motor01@uespi.br` | `motor123` | Motorista | Campus Torquato Neto |
+| `motor02` | `motor02@uespi.br` | `motor123` | Motorista | Campus Alexandre Alves de Oliveira |
+
+---
+
+#### `load_sample_data` — dados aleatórios com Faker
+Gera volume maior de dados usando nomes e valores gerados pelo Faker.
+
+```bash
+# Padrão: 3 campi, 10 professores/campus, 3 motoristas/campus, 20 agendamentos
+python manage.py load_sample_data
+
+# Personalizado
+python manage.py load_sample_data --campi 5 --professores 5 --motoristas 2 --agendamentos 30
+```
+
+| Argumento | Padrão | Descrição |
+|---|---|---|
+| `--campi` | 3 | Quantidade de campi (máx 5) |
+| `--administradores` | 3 | Quantidade de administradores |
+| `--professores` | 10 | Professores por campus |
+| `--motoristas` | 3 | Motoristas por campus |
+| `--agendamentos` | 20 | Total de agendamentos |
+
+**Credenciais geradas:**
+
+| Username | Email | Senha | Perfil |
+|---|---|---|---|
+| `admin` | `admin@uespi.br` | `admin123` | Administrador |
+| `admin2` | `admin2@uespi.br` | `admin123` | Administrador |
+| `admin3` | `admin3@uespi.br` | `admin123` | Administrador |
+| `resp01`, `resp02`… | `resp01@uespi.br`… | `resp123` | Responsável de Campus |
+| `prof01`, `prof02`… | `prof01@uespi.br`… | `senha123` | Professor |
+| `motor01`, `motor02`… | `motor01@uespi.br`… | `motor123` | Motorista |
+
+---
+
+#### `reset_db` — reseta o banco e recarrega dados
+Apaga todos os dados, reaplica as migrations e chama `load_sample_data`.
+
+```bash
+# Reseta e carrega dados padrão do load_sample_data
+python manage.py reset_db
+
+# Reseta e carrega com parâmetros personalizados
+python manage.py reset_db --campi 2 --professores 5 --agendamentos 15
+
+# Apenas reseta o banco, sem carregar dados
+python manage.py reset_db --no-seed
+```
+
+Para resetar com os dados fixos do `create_data_load`:
+```bash
+python manage.py reset_db --no-seed && python manage.py create_data_load
+```
+
 ---
 
 ## 📧 Configuração de Email
@@ -412,8 +502,9 @@ print(get_random_secret_key())
 
 #### **Usuario** (usuários/)
 - Herda de `AbstractUser` do Django
-- Campos: `username`, `email`, `tipo_usuario` (professor/administrador)
-- Email institucional obrigatório: `@*.uespi.br` ou  `@uespi.br`
+- Campos: `username`, `email`, `campus`, `telefone`, `numero_habilitacao`
+- Perfis via Django Groups: `Administradores`, `Professores`, `Motoristas`, `Responsaveis de Campus`
+- Email institucional obrigatório: `@*.uespi.br` ou `@uespi.br`
 - Ativação de conta via email
 
 #### **Veiculo** (veiculos/)
@@ -427,9 +518,25 @@ print(get_random_secret_key())
 
 #### **Agendamento** (agendamentos/)
 - Relacionamentos: `curso`, `professor`, `veiculo`
-- Campos: `data_inicio`, `data_fim`, `status`, `km_previsto`
+- Campos: `data_inicio`, `data_fim`, `status`, `observacoes`
 - Status: Pendente, Aprovado, Reprovado
 - Validações de conflito de horários
+
+#### **Campus** (campus/)
+- Campos: `nome`, `cidade`, `endereco`, `ativo`
+- UUID como primary key
+- Vinculado a usuários, cursos e veículos
+
+#### **Abastecimento** (frotas/)
+- Relacionamentos: `veiculo`, `motorista`, `agendamento` (opcional)
+- Campos: `local_posto`, `data_hora`, `km_atual`, `litros_abastecidos`, `valor_gasto`, `tipo_combustivel`
+- Combustíveis: gasolina, etanol, diesel, GNV, elétrico
+
+#### **Ocorrencia** (frotas/)
+- Relacionamentos: `agendamento`, `veiculo`, `motorista`
+- Campos: `tipo`, `gravidade`, `data_hora`, `local`, `descricao`, `resolvido`
+- Tipos: acidente, pane, multa, furto, avaria, outro
+- Gravidade: baixa, média, alta, crítica
 
 ---
 
