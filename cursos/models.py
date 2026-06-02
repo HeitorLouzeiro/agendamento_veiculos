@@ -16,6 +16,14 @@ class Curso(models.Model):
     )
     nome = models.CharField(max_length=200, unique=True,
                             verbose_name='Nome do Curso')
+    campus = models.ForeignKey(
+        'campus.Campus',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cursos',
+        verbose_name='Campus'
+    )
     limite_km_mensal = models.PositiveIntegerField(
         default=1000,
         verbose_name='Limite de KM Mensal',
@@ -38,11 +46,9 @@ class Curso(models.Model):
 
     def get_km_utilizados_mes(self, ano, mes):
         """
-        Retorna a quilometragem total utilizada pelo curso em um mês específico.
-        Considera apenas agendamentos APROVADOS.
+        Retorna a quilometragem total utilizada pelo curso
+        em um mês específico. Considera apenas agendamentos APROVADOS.
         """
-        from django.db.models import Sum
-
         from agendamentos.models import Agendamento
 
         agendamentos = Agendamento.objects.filter(

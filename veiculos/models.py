@@ -16,7 +16,17 @@ class Veiculo(models.Model):
         editable=False,
         verbose_name='ID'
     )
-    placa = models.CharField(max_length=10, unique=True, verbose_name='Placa')
+    campus = models.ForeignKey(
+        'campus.Campus',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='veiculos',
+        verbose_name='Campus'
+    )
+    placa = models.CharField(
+        max_length=10, unique=True, verbose_name='Placa'
+    )
     modelo = models.CharField(max_length=100, verbose_name='Modelo')
     marca = models.CharField(max_length=100, verbose_name='Marca')
     ano = models.PositiveIntegerField(verbose_name='Ano')
