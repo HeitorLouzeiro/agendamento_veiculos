@@ -54,11 +54,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Apps do projeto
+    'campus',
     'usuarios',
     'cursos',
     'veiculos',
     'agendamentos',
     'dashboard',
+    'frotas',
 ]
 
 MIDDLEWARE = [
