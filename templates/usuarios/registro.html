@@ -2,6 +2,11 @@
 
 {% block title %}Registro - Sistema de Agendamento{% endblock %}
 
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row justify-content-center mt-5">
@@ -63,6 +68,16 @@
                             <div class="form-text">{{ form.telefone.help_text }}</div>
                             {% if form.telefone.errors %}
                             <div class="text-danger small">{{ form.telefone.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.campus.id_for_label }}" class="form-label">
+                                {{ form.campus.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.campus }}
+                            {% if form.campus.errors %}
+                            <div class="text-danger small">{{ form.campus.errors }}</div>
                             {% endif %}
                         </div>
 
@@ -154,36 +169,39 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/pt-BR.js"></script>
 <script>
-    // Converte username para minúsculas automaticamente
+$(document).ready(function() {
+    $('#{{ form.campus.id_for_label }}').select2({
+        theme: 'bootstrap-5',
+        language: 'pt-BR',
+        placeholder: '— Selecione um campus —',
+        allowClear: true,
+        width: '100%'
+    });
+
     document.getElementById('{{ form.username.id_for_label }}').addEventListener('input', function(e) {
         this.value = this.value.toLowerCase();
     });
-    
-    // Formatação automática do telefone (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+
     document.getElementById('{{ form.telefone.id_for_label }}').addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
-        
-        if (value.length > 11) {
-            value = value.slice(0, 11); // Limita a 11 dígitos
-        }
-        
-        // Formata o telefone
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 11) value = value.slice(0, 11);
         if (value.length > 10) {
-            // Formato: (XX) XXXXX-XXXX
             value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
         } else if (value.length > 6) {
-            // Formato: (XX) XXXX-XXXX
             value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
         } else if (value.length > 2) {
-            // Formato: (XX) XXXX
             value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
         } else if (value.length > 0) {
-            // Formato: (XX
             value = value.replace(/^(\d*)/, '($1');
         }
-        
         e.target.value = value;
     });
+});
 </script>
 {% endblock %}
