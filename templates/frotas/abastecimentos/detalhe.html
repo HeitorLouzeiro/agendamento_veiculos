@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhe Abastecimento - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="bi bi-fuel-pump"></i> Abastecimento</h4>
+                    <div>
+                        <a href="{% url 'frotas:editar_abastecimento' abastecimento.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Editar
+                        </a>
+                        <a href="{% url 'frotas:deletar_abastecimento' abastecimento.pk %}" class="btn btn-sm btn-outline-danger ms-1">
+                            <i class="bi bi-trash"></i> Excluir
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Veículo</dt>
+                        <dd class="col-sm-8">{{ abastecimento.veiculo.placa }} — {{ abastecimento.veiculo.modelo }}</dd>
+
+                        <dt class="col-sm-4">Data / Hora</dt>
+                        <dd class="col-sm-8">{{ abastecimento.data_hora|date:"d/m/Y H:i" }}</dd>
+
+                        <dt class="col-sm-4">Local / Posto</dt>
+                        <dd class="col-sm-8">{{ abastecimento.local_posto }}</dd>
+
+                        <dt class="col-sm-4">Km Atual</dt>
+                        <dd class="col-sm-8">{{ abastecimento.km_atual }} km</dd>
+
+                        <dt class="col-sm-4">Combustível</dt>
+                        <dd class="col-sm-8">{{ abastecimento.get_tipo_combustivel_display }}</dd>
+
+                        <dt class="col-sm-4">Litros Abastecidos</dt>
+                        <dd class="col-sm-8">{{ abastecimento.litros_abastecidos }} L</dd>
+
+                        <dt class="col-sm-4">Valor Gasto</dt>
+                        <dd class="col-sm-8">R$ {{ abastecimento.valor_gasto }}</dd>
+
+                        {% if abastecimento.preco_por_litro %}
+                        <dt class="col-sm-4">Preço / Litro</dt>
+                        <dd class="col-sm-8">R$ {{ abastecimento.preco_por_litro }}</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-4">Motorista</dt>
+                        <dd class="col-sm-8">{{ abastecimento.motorista.get_full_name|default:abastecimento.motorista.username }}</dd>
+
+                        {% if abastecimento.agendamento %}
+                        <dt class="col-sm-4">Agendamento</dt>
+                        <dd class="col-sm-8">{{ abastecimento.agendamento }}</dd>
+                        {% endif %}
+
+                        {% if abastecimento.observacoes %}
+                        <dt class="col-sm-4">Observações</dt>
+                        <dd class="col-sm-8">{{ abastecimento.observacoes }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'frotas:lista_abastecimentos' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

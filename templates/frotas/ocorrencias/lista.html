@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load pagination_tags %}
+
+{% block title %}Ocorrências - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-exclamation-circle"></i> Ocorrências</h2>
+        <a href="{% url 'frotas:criar_ocorrencia' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Registrar Ocorrência
+        </a>
+    </div>
+
+    {% if ocorrencias %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data / Hora</th>
+                            <th>Veículo</th>
+                            <th>Tipo</th>
+                            <th>Gravidade</th>
+                            <th>Local</th>
+                            <th>Status</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for o in ocorrencias %}
+                        <tr>
+                            <td>{{ o.data_hora|date:"d/m/Y H:i" }}</td>
+                            <td><strong>{{ o.veiculo.placa }}</strong></td>
+                            <td>{{ o.get_tipo_display }}</td>
+                            <td>
+                                {% if o.gravidade == 'critica' %}
+                                <span class="badge bg-danger">Crítica</span>
+                                {% elif o.gravidade == 'alta' %}
+                                <span class="badge bg-warning text-dark">Alta</span>
+                                {% elif o.gravidade == 'media' %}
+                                <span class="badge bg-info text-dark">Média</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Baixa</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ o.local }}</td>
+                            <td>
+                                {% if o.resolvido %}
+                                <span class="badge bg-success">Resolvido</span>
+                                {% else %}
+                                <span class="badge bg-danger">Pendente</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'frotas:detalhe_ocorrencia' o.pk %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'frotas:editar_ocorrencia' o.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% render_pagination ocorrencias %}
+
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Nenhuma ocorrência registrada.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

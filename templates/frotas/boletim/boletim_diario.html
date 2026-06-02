@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}Boletim Diário de Veículo - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-journal-text"></i> Boletim Diário de Veículo</h2>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary fs-6">
+                {% if multiplos_dias %}
+                    {{ data_inicio|date:"d/m/Y" }} — {{ data_fim|date:"d/m/Y" }}
+                {% else %}
+                    {{ data_inicio|date:"d/m/Y" }}
+                {% endif %}
+            </span>
+            {% if veiculo_selecionado %}
+            <a href="{% url 'frotas:exportar_boletim_pdf' %}?{{ request.GET.urlencode }}"
+               class="btn btn-danger btn-sm">
+                <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" id="form-filtro">
+                <input type="hidden" name="periodo" id="input-periodo" value="{{ periodo }}">
+
+                <!-- Botões de período rápido -->
+                <div class="d-flex gap-2 mb-3 flex-wrap">
+                    {% for label, valor in periodos %}
+                    <button type="button"
+                            class="btn btn-periodo {% if periodo == valor %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            data-periodo="{{ valor }}">
+                        {{ label }}
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <!-- Datas personalizadas -->
+                <div id="bloco-personalizado" class="row g-2 mb-3 {% if periodo != 'personalizado' %}d-none{% endif %}">
+                    <div class="col-md-4">
+                        <label class="form-label">Data início</label>
+                        <input type="date" name="data_inicio" id="data_inicio"
+                               value="{{ data_inicio|date:'Y-m-d' }}" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Data fim</label>
+                        <input type="date" name="data_fim" id="data_fim"
+                               value="{{ data_fim|date:'Y-m-d' }}" class="form-control">
+                    </div>
+                </div>
+
+                <!-- Veículo + Filtrar -->
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">Veículo (opcional)</label>
+                        <select name="veiculo" class="form-select">
+                            <option value="">— Todos os veículos —</option>
+                            {% for v in todos_veiculos %}
+                            <option value="{{ v.pk }}" {% if veiculo_selecionado == v.pk|stringformat:'s' %}selected{% endif %}>
+                                {{ v.placa }} — {{ v.modelo }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if boletim_data %}
+    {% for item in boletim_data %}
+    <div class="card mb-4">
+        <!-- Cabeçalho do veículo -->
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-truck"></i>
+                <strong>{{ item.veiculo.placa }}</strong> — {{ item.veiculo.modelo }} ({{ item.veiculo.marca }})
+            </h5>
+            <div class="d-flex gap-2">
+                <span class="badge bg-light text-dark">
+                    <i class="bi bi-speedometer2"></i> {{ item.total_km }} km
+                </span>
+                <span class="badge bg-warning text-dark">
+                    <i class="bi bi-fuel-pump"></i> {{ item.total_litros }} L / R$ {{ item.total_gasto_combustivel }}
+                </span>
+                {% if item.ocorrencias_criticas > 0 %}
+                <span class="badge bg-danger">
+                    <i class="bi bi-exclamation-triangle"></i> {{ item.ocorrencias_criticas }} ocorrência(s) crítica(s)
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+
+            <!-- Seção A: Viagens -->
+            <div class="p-3 border-bottom">
+                <h6 class="text-muted mb-2"><i class="bi bi-map"></i> Viagens</h6>
+                {% if item.agendamentos %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Professor</th>
+                                <th>Curso</th>
+                                <th>Período</th>
+                                <th>Km Total</th>
+                                <th>Trajetos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ag in item.agendamentos %}
+                            <tr>
+                                <td>{{ ag.professor.get_full_name }}</td>
+                                <td>{{ ag.curso.nome }}</td>
+                                <td>{{ ag.data_inicio|date:"d/m H:i" }} → {{ ag.data_fim|date:"d/m H:i" }}</td>
+                                <td>{{ ag.get_total_km }} km</td>
+                                <td>
+                                    {% for t in ag.trajetos.all %}
+                                    <small class="d-block text-muted">{{ t.origem }} → {{ t.destino }}</small>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted small mb-0">Nenhuma viagem no período.</p>
+                {% endif %}
+            </div>
+
+            <!-- Seção B: Abastecimentos -->
+            <div class="p-3 border-bottom">
+                <h6 class="text-muted mb-2"><i class="bi bi-fuel-pump"></i> Abastecimentos</h6>
+                {% if item.abastecimentos %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Posto</th>
+                                <th>Combustível</th>
+                                <th>Litros</th>
+                                <th>Valor (R$)</th>
+                                <th>Hodômetro</th>
+                                <th>Motorista</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ab in item.abastecimentos %}
+                            <tr>
+                                <td>{{ ab.data_hora|date:"d/m H:i" }}</td>
+                                <td>{{ ab.local_posto }}</td>
+                                <td>{{ ab.get_tipo_combustivel_display }}</td>
+                                <td>{{ ab.litros_abastecidos }} L</td>
+                                <td>R$ {{ ab.valor_gasto }}</td>
+                                <td>{{ ab.km_atual }} km</td>
+                                <td>{{ ab.motorista.get_full_name|default:"—" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="3"><strong>Total</strong></td>
+                                <td><strong>{{ item.total_litros }} L</strong></td>
+                                <td><strong>R$ {{ item.total_gasto_combustivel }}</strong></td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted small mb-0">Nenhum abastecimento no período.</p>
+                {% endif %}
+            </div>
+
+            <!-- Seção C: Ocorrências -->
+            <div class="p-3">
+                <h6 class="text-muted mb-2"><i class="bi bi-exclamation-circle"></i> Ocorrências</h6>
+                {% if item.ocorrencias %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Tipo</th>
+                                <th>Gravidade</th>
+                                <th>Local</th>
+                                <th>Responsável</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for oc in item.ocorrencias %}
+                            <tr>
+                                <td>{{ oc.data_hora|date:"d/m H:i" }}</td>
+                                <td>{{ oc.get_tipo_display }}</td>
+                                <td>
+                                    {% if oc.gravidade == 'critica' %}
+                                    <span class="badge bg-danger">Crítica</span>
+                                    {% elif oc.gravidade == 'alta' %}
+                                    <span class="badge bg-warning text-dark">Alta</span>
+                                    {% elif oc.gravidade == 'media' %}
+                                    <span class="badge bg-info text-dark">Média</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Baixa</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ oc.local }}</td>
+                                <td>{{ oc.motorista.get_full_name|default:"—" }}</td>
+                                <td>
+                                    {% if oc.resolvido %}
+                                    <span class="badge bg-success">Resolvida</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Pendente</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'frotas:detalhe_ocorrencia' oc.pk %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted small mb-0">Nenhuma ocorrência no período.</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        Nenhuma atividade registrada
+        {% if multiplos_dias %}
+            entre <strong>{{ data_inicio|date:"d/m/Y" }}</strong> e <strong>{{ data_fim|date:"d/m/Y" }}</strong>.
+        {% else %}
+            em <strong>{{ data_inicio|date:"d/m/Y" }}</strong>.
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const inputPeriodo = document.getElementById('input-periodo');
+    const blocoPersonalizado = document.getElementById('bloco-personalizado');
+    const form = document.getElementById('form-filtro');
+
+    document.querySelectorAll('.btn-periodo').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const periodo = this.dataset.periodo;
+            inputPeriodo.value = periodo;
+
+            document.querySelectorAll('.btn-periodo').forEach(function (b) {
+                b.classList.remove('btn-primary');
+                b.classList.add('btn-outline-secondary');
+            });
+            this.classList.remove('btn-outline-secondary');
+            this.classList.add('btn-primary');
+
+            if (periodo === 'personalizado') {
+                blocoPersonalizado.classList.remove('d-none');
+            } else {
+                blocoPersonalizado.classList.add('d-none');
+                form.submit();
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

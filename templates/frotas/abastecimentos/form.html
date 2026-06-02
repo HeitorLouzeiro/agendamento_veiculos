@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-fuel-pump"></i> {{ titulo }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.veiculo.label }}</label>
+                                {{ form.veiculo }}
+                                {% if form.veiculo.errors %}<div class="text-danger small">{{ form.veiculo.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.tipo_combustivel.label }}</label>
+                                {{ form.tipo_combustivel }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.data_hora.label }}</label>
+                                {{ form.data_hora }}
+                                {% if form.data_hora.errors %}<div class="text-danger small">{{ form.data_hora.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ form.local_posto.label }}</label>
+                                {{ form.local_posto }}
+                                {% if form.local_posto.errors %}<div class="text-danger small">{{ form.local_posto.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">{{ form.km_atual.label }}</label>
+                                {{ form.km_atual }}
+                                {% if form.km_atual.errors %}<div class="text-danger small">{{ form.km_atual.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">{{ form.litros_abastecidos.label }}</label>
+                                {{ form.litros_abastecidos }}
+                                {% if form.litros_abastecidos.errors %}<div class="text-danger small">{{ form.litros_abastecidos.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">{{ form.valor_gasto.label }}</label>
+                                {{ form.valor_gasto }}
+                                {% if form.valor_gasto.errors %}<div class="text-danger small">{{ form.valor_gasto.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">{{ form.agendamento.label }} <span class="text-muted">(opcional)</span></label>
+                                {{ form.agendamento }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">{{ form.observacoes.label }} <span class="text-muted">(opcional)</span></label>
+                                {{ form.observacoes }}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'frotas:lista_abastecimentos' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Voltar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Salvar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load pagination_tags %}
+
+{% block title %}Abastecimentos - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-fuel-pump"></i> Abastecimentos</h2>
+        <a href="{% url 'frotas:criar_abastecimento' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Registrar Abastecimento
+        </a>
+    </div>
+
+    {% if abastecimentos %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data / Hora</th>
+                            <th>Veículo</th>
+                            <th>Posto</th>
+                            <th>Litros</th>
+                            <th>Valor (R$)</th>
+                            <th>Km Atual</th>
+                            <th>Motorista</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in abastecimentos %}
+                        <tr>
+                            <td>{{ a.data_hora|date:"d/m/Y H:i" }}</td>
+                            <td><strong>{{ a.veiculo.placa }}</strong> — {{ a.veiculo.modelo }}</td>
+                            <td>{{ a.local_posto }}</td>
+                            <td>{{ a.litros_abastecidos }} L</td>
+                            <td>R$ {{ a.valor_gasto }}</td>
+                            <td>{{ a.km_atual }} km</td>
+                            <td>{{ a.motorista.get_full_name|default:a.motorista.username }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'frotas:detalhe_abastecimento' a.pk %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'frotas:editar_abastecimento' a.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'frotas:deletar_abastecimento' a.pk %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% render_pagination abastecimentos %}
+
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Nenhum abastecimento registrado ainda.
+        <a href="{% url 'frotas:criar_abastecimento' %}" class="alert-link">Registrar o primeiro</a>.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

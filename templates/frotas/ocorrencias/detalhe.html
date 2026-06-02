@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhe Ocorrência - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-circle"></i> {{ ocorrencia.get_tipo_display }}</h4>
+                    <div>
+                        {% if not ocorrencia.resolvido %}
+                        {% if user.is_administrador or user.is_responsavel_campus %}
+                        <form method="post" action="{% url 'frotas:resolver_ocorrencia' ocorrencia.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="bi bi-check-circle"></i> Marcar como Resolvida
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% endif %}
+                        <a href="{% url 'frotas:editar_ocorrencia' ocorrencia.pk %}" class="btn btn-sm btn-outline-primary ms-1">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{% url 'frotas:deletar_ocorrencia' ocorrencia.pk %}" class="btn btn-sm btn-outline-danger ms-1">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        {% if ocorrencia.resolvido %}
+                        <span class="badge bg-success fs-6">Resolvida</span>
+                        {% else %}
+                        <span class="badge bg-danger fs-6">Pendente</span>
+                        {% endif %}
+                        {% if ocorrencia.gravidade == 'critica' %}
+                        <span class="badge bg-danger ms-2">Gravidade: Crítica</span>
+                        {% elif ocorrencia.gravidade == 'alta' %}
+                        <span class="badge bg-warning text-dark ms-2">Gravidade: Alta</span>
+                        {% elif ocorrencia.gravidade == 'media' %}
+                        <span class="badge bg-info text-dark ms-2">Gravidade: Média</span>
+                        {% else %}
+                        <span class="badge bg-secondary ms-2">Gravidade: Baixa</span>
+                        {% endif %}
+                    </div>
+
+                    <dl class="row">
+                        <dt class="col-sm-4">Veículo</dt>
+                        <dd class="col-sm-8">{{ ocorrencia.veiculo.placa }} — {{ ocorrencia.veiculo.modelo }}</dd>
+
+                        <dt class="col-sm-4">Agendamento</dt>
+                        <dd class="col-sm-8">{{ ocorrencia.agendamento }}</dd>
+
+                        <dt class="col-sm-4">Data / Hora</dt>
+                        <dd class="col-sm-8">{{ ocorrencia.data_hora|date:"d/m/Y H:i" }}</dd>
+
+                        <dt class="col-sm-4">Local</dt>
+                        <dd class="col-sm-8">{{ ocorrencia.local }}</dd>
+
+                        <dt class="col-sm-4">Descrição</dt>
+                        <dd class="col-sm-8">{{ ocorrencia.descricao }}</dd>
+
+                        {% if ocorrencia.providencias_tomadas %}
+                        <dt class="col-sm-4">Providências</dt>
+                        <dd class="col-sm-8">{{ ocorrencia.providencias_tomadas }}</dd>
+                        {% endif %}
+
+                        {% if ocorrencia.numero_boletim %}
+                        <dt class="col-sm-4">Nº Boletim (BO)</dt>
+                        <dd class="col-sm-8">{{ ocorrencia.numero_boletim }}</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-4">Responsável</dt>
+                        <dd class="col-sm-8">{{ ocorrencia.motorista.get_full_name|default:"—" }}</dd>
+                    </dl>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'frotas:lista_ocorrencias' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
