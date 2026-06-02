@@ -1,3 +1,5 @@
+import uuid as _uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.crypto import get_random_string
@@ -6,21 +8,16 @@ from django.utils.crypto import get_random_string
 class Usuario(AbstractUser):
     """
     Model customizado de usuário.
-    Usa grupos Django para diferenciar Professor e Administrador.
+    Usa grupos Django para diferenciar Professor, Administrador,
+    Motorista e Responsável de Campus.
     """
-    TIPO_USUARIO_CHOICES = [
-        ('professor', 'Professor'),
-        ('administrador', 'Administrador'),
-    ]
-
-    tipo_usuario = models.CharField(
-        max_length=20,
-        choices=TIPO_USUARIO_CHOICES,
-        default='professor',
-        verbose_name='Tipo de Usuário'
+    uuid = models.UUIDField(
+        default=_uuid.uuid4,
+        editable=False,
+        unique=True,
+        verbose_name='UUID'
     )
 
-    # Sobrescreve o campo email para torná-lo único e obrigatório
     email = models.EmailField(
         verbose_name='E-mail',
         unique=True,
@@ -34,8 +31,22 @@ class Usuario(AbstractUser):
         blank=True,
         verbose_name='Telefone'
     )
-    
-    # Token de ativação de conta (usa is_active do Django)
+
+    campus = models.ForeignKey(
+        'campus.Campus',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='usuarios',
+        verbose_name='Campus'
+    )
+
+    numero_habilitacao = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name='Número da CNH'
+    )
+
     token_ativacao = models.CharField(
         max_length=100,
         blank=True,
@@ -47,7 +58,6 @@ class Usuario(AbstractUser):
         verbose_name='Token Criado Em'
     )
 
-    # Perguntas de segurança para recuperação de senha
     pergunta_seguranca_1 = models.CharField(
         max_length=200,
         blank=True,
@@ -75,18 +85,25 @@ class Usuario(AbstractUser):
         verbose_name_plural = 'Usuários'
 
     def __str__(self):
-        return f"{self.get_full_name()} ({self.get_tipo_usuario_display()})"
+        grupo = self.groups.first()
+        grupo_nome = grupo.name if grupo else 'Sem grupo'
+        return f'{self.get_full_name()} ({grupo_nome})'
 
     def is_administrador(self):
-        """Verifica se o usuário é administrador"""
-        return self.tipo_usuario == 'administrador' or self.is_superuser
+        return self.is_superuser or self.groups.filter(
+            name='Administradores'
+        ).exists()
 
     def is_professor(self):
-        """Verifica se o usuário é professor"""
-        return self.tipo_usuario == 'professor'
-    
+        return self.groups.filter(name='Professores').exists()
+
+    def is_motorista(self):
+        return self.groups.filter(name='Motoristas').exists()
+
+    def is_responsavel_campus(self):
+        return self.groups.filter(name='Responsaveis de Campus').exists()
+
     def gerar_token_ativacao(self):
-        """Gera um novo token de ativação de conta"""
         from django.utils import timezone
         self.token_ativacao = get_random_string(64)
         self.token_criado_em = timezone.now()
