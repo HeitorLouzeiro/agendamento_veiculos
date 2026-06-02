@@ -2,6 +2,12 @@
 
 {% block title %}{{ titulo }} - Sistema de Agendamento{% endblock %}
 
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<style>.select2-container--bootstrap-5 .select2-selection { min-height: 38px; }</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
@@ -13,7 +19,15 @@
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
-                        
+
+                        <div class="mb-3">
+                            <label for="{{ form.campus.id_for_label }}" class="form-label">{{ form.campus.label }}</label>
+                            {{ form.campus }}
+                            {% if form.campus.errors %}
+                            <div class="text-danger small">{{ form.campus.errors }}</div>
+                            {% endif %}
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="{{ form.placa.id_for_label }}" class="form-label">{{ form.placa.label }}</label>
@@ -52,9 +66,6 @@
                             <div class="col-md-6 mb-3">
                                 <label for="{{ form.cor.id_for_label }}" class="form-label">{{ form.cor.label }}</label>
                                 {{ form.cor }}
-                                {% if form.cor.errors %}
-                                <div class="text-danger small">{{ form.cor.errors }}</div>
-                                {% endif %}
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="{{ form.capacidade_passageiros.id_for_label }}" class="form-label">{{ form.capacidade_passageiros.label }}</label>
@@ -68,9 +79,6 @@
                         <div class="mb-3">
                             <label for="{{ form.observacoes.id_for_label }}" class="form-label">{{ form.observacoes.label }}</label>
                             {{ form.observacoes }}
-                            {% if form.observacoes.errors %}
-                            <div class="text-danger small">{{ form.observacoes.errors }}</div>
-                            {% endif %}
                         </div>
 
                         <div class="mb-3 form-check">
@@ -78,9 +86,6 @@
                             <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
                                 {{ form.ativo.label }}
                             </label>
-                            {% if form.ativo.errors %}
-                            <div class="text-danger small">{{ form.ativo.errors }}</div>
-                            {% endif %}
                         </div>
 
                         <div class="d-flex justify-content-between">
@@ -97,4 +102,20 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/pt-BR.js"></script>
+<script>
+$(document).ready(function() {
+    $('.select2-campus').select2({
+        theme: 'bootstrap-5',
+        language: 'pt-BR',
+        placeholder: 'Selecione ou digite o nome do campus',
+        allowClear: true,
+        width: '100%'
+    });
+});
+</script>
 {% endblock %}

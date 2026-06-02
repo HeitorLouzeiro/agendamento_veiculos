@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-truck"></i> Gerenciar Veículos</h2>
+        <h2><i class="bi bi-truck"></i> {% if is_admin %}Todos os Veículos{% else %}Veículos do Campus{% endif %}</h2>
         <a href="{% url 'veiculos:criar' %}" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i> Novo Veículo
         </a>
@@ -33,7 +33,12 @@
                         <small class="text-muted">
                             Ano: {{ veiculo.ano }}<br>
                             {% if veiculo.cor %}Cor: {{ veiculo.cor }}<br>{% endif %}
-                            Capacidade: {{ veiculo.capacidade_passageiros }} passageiros
+                            Capacidade: {{ veiculo.capacidade_passageiros }} passageiros<br>
+                            {% if is_admin %}
+                            <span class="badge bg-light text-dark border mt-1">
+                                <i class="bi bi-building"></i> {{ veiculo.campus.nome|default:"Sem campus" }}
+                            </span>
+                            {% endif %}
                         </small>
                     </p>
                     {% if veiculo.observacoes %}
@@ -54,10 +59,9 @@
         </div>
         {% endfor %}
     </div>
-    
-    <!-- Paginação -->
+
     {% render_pagination veiculos %}
-    
+
     {% else %}
     <div class="alert alert-info">
         <i class="bi bi-info-circle"></i> Nenhum veículo cadastrado ainda.
