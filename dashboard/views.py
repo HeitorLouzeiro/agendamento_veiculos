@@ -7,10 +7,16 @@ from django.utils import timezone
 
 from agendamentos.models import Agendamento
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+
 
 @login_required
 def dashboard(request):
-    """Página principal com calendário de agendamentos (público)"""
+    if request.user.is_motorista():
+        return redirect('frotas:dashboard_motorista')
+    if request.user.is_responsavel_campus():
+        return redirect('frotas:dashboard_responsavel')
+
     # Obter o mês e ano do calendário (padrão: mês atual)
     try:
         mes = int(request.GET.get('mes', timezone.now().month))
@@ -25,7 +31,7 @@ def dashboard(request):
     #   - Todos os agendamentos aprovados (para ver disponibilidade)
     #   - Apenas seus próprios pendentes (não mostra cancelados)
     # Usuários não autenticados veem apenas aprovados
-    
+
     if not request.user.is_authenticated:
         # Não autenticado: apenas aprovados
         agendamentos = Agendamento.objects.filter(status='aprovado')
