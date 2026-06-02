@@ -73,30 +73,75 @@
                         </a>
                     </li>
                     {% if user.is_authenticated %}
+                    {% if user.is_motorista %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'frotas:dashboard_motorista' %}">
+                            <i class="bi bi-person-badge"></i> Minha Área
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'frotas:criar_abastecimento' %}">
+                            <i class="bi bi-fuel-pump"></i> Abastecer
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'frotas:criar_ocorrencia' %}">
+                            <i class="bi bi-exclamation-circle"></i> Ocorrência
+                        </a>
+                    </li>
+                    {% else %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'agendamentos:lista' %}">
                             <i class="bi bi-list-ul"></i> Meus Agendamentos
                         </a>
                     </li>
+                    {% endif %}
+                    {% if user.is_responsavel_campus or user.is_administrador %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="gestaoDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-people-fill"></i> Gestão
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'agendamentos:aprovacao' %}">
+                                <i class="bi bi-check-circle"></i> Aprovar Agendamentos
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'agendamentos:relatorio_geral' %}">
+                                <i class="bi bi-graph-up"></i> Relatório Geral
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'usuarios:lista_motoristas' %}">
+                                <i class="bi bi-person-badge"></i> Motoristas
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'usuarios:lista_professores' %}">
+                                <i class="bi bi-person-workspace"></i> Professores
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'frotas:lista_abastecimentos' %}">
+                                <i class="bi bi-fuel-pump"></i> Abastecimentos
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'frotas:lista_ocorrencias' %}">
+                                <i class="bi bi-exclamation-circle"></i> Ocorrências
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'frotas:boletim_diario' %}">
+                                <i class="bi bi-journal-text"></i> Boletim Diário
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'cursos:lista' %}">
+                                <i class="bi bi-book"></i> Cursos
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'veiculos:lista' %}">
+                                <i class="bi bi-truck"></i> Veículos
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
                     {% if user.is_administrador %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-gear-fill"></i> Administração
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'agendamentos:aprovacao' %}">
-                                <i class="bi bi-check-circle"></i> Aprovar Agendamentos
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'agendamentos:relatorio_geral' %}">
-                                <i class="bi bi-graph-up"></i> Relatório Geral
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'cursos:lista' %}">
-                                <i class="bi bi-book"></i> Gerenciar Cursos
-                            </a></li>
-                            <li><a class="dropdown-item" href="{% url 'veiculos:lista' %}">
-                                <i class="bi bi-truck"></i> Gerenciar Veículos
+                            <li><a class="dropdown-item" href="{% url 'campus:lista' %}">
+                                <i class="bi bi-building"></i> Gerenciar Campi
                             </a></li>
                         </ul>
                     </li>

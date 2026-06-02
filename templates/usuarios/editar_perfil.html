@@ -98,13 +98,6 @@
                             {% endif %}
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-shield-check"></i> Tipo de Usuário
-                            </label>
-                            <input type="text" class="form-control" value="{{ user.get_tipo_usuario_display }}" disabled>
-                        </div>
-
                         {% if form.non_field_errors %}
                             <div class="alert alert-danger">
                                 {{ form.non_field_errors }}
