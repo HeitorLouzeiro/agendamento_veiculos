@@ -1,16 +1,23 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Group
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.mail import send_mail
 from django.db.models import Q
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from .forms import (PERGUNTAS_SEGURANCA, AlterarSenhaForm, EditarPerfilForm,
-                    RecuperarSenhaStep1Form, RecuperarSenhaStep2Form,
-                    RecuperarSenhaStep3Form, RegistroForm)
+from common.decorators import responsavel_campus_required
+from common.pagination import PaginationHelper
+
+from .forms import (PERGUNTAS_SEGURANCA, AlterarSenhaForm,
+                    CriarMotoristaForm, CriarProfessorForm,
+                    EditarPerfilForm, RecuperarSenhaStep1Form,
+                    RecuperarSenhaStep2Form, RecuperarSenhaStep3Form,
+                    RegistroForm)
 from .models import Usuario
 
 
@@ -20,6 +27,11 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
 
     def get_success_url(self):
+        user = self.request.user
+        if user.is_motorista():
+            return reverse('frotas:dashboard_motorista')
+        if user.is_responsavel_campus():
+            return reverse('frotas:dashboard_responsavel')
         return '/'
 
     def form_valid(self, form):
@@ -28,19 +40,19 @@ class CustomLoginView(LoginView):
         if username:
             form.cleaned_data['username'] = username.lower()
         return super().form_valid(form)
-    
+
     def form_invalid(self, form):
         """Verifica se o usuário existe mas está inativo"""
         username = self.request.POST.get('username', '').lower()
         password = self.request.POST.get('password', '')
-        
+
         if username and password:
             try:
                 # Busca por username ou email
                 usuario = Usuario.objects.get(
                     Q(username=username) | Q(email__iexact=username)
                 )
-                
+
                 # Verifica se a senha está correta e o usuário inativo
                 if usuario.check_password(password) and not usuario.is_active:
                     messages.error(
@@ -60,7 +72,7 @@ class CustomLoginView(LoginView):
                 pass
             except Usuario.MultipleObjectsReturned:
                 pass
-        
+
         return super().form_invalid(form)
 
 
@@ -78,19 +90,19 @@ def registro(request):
         form = RegistroForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            # Usuário inicia inativo até confirmar email
             user.is_active = False
-            # Gera token de ativação
             user.gerar_token_ativacao()
             user.save()
-            
+            grupo, _ = Group.objects.get_or_create(name='Professores')
+            user.groups.add(grupo)
+
             # Envia email de ativação
             try:
                 link_ativacao = request.build_absolute_uri(
                     reverse('usuarios:ativar_conta',
                             args=[user.token_ativacao])
                 )
-                
+
                 assunto = 'Ative sua conta - Sistema de Agendamento UESPI'
                 mensagem = (
                     f'Olá, {user.get_full_name()}!\n\n'
@@ -103,7 +115,7 @@ def registro(request):
                     f'Atenciosamente,\n'
                     f'Equipe Sistema de Agendamento - UESPI'
                 )
-                
+
                 send_mail(
                     assunto,
                     mensagem,
@@ -111,7 +123,7 @@ def registro(request):
                     [user.email],
                     fail_silently=False,
                 )
-                
+
                 messages.success(
                     request,
                     f'Cadastro realizado com sucesso! '
@@ -126,7 +138,7 @@ def registro(request):
                     f'o e-mail de ativação. Entre em contato com o '
                     f'administrador. Erro: {str(e)}'
                 )
-            
+
             return redirect('usuarios:login')
     else:
         form = RegistroForm()
@@ -138,7 +150,7 @@ def confirmar_email(request, token):
     """View para ativar conta através do token"""
     try:
         usuario = Usuario.objects.get(token_ativacao=token)
-        
+
         # Verifica se o token não expirou (24 horas)
         if usuario.token_criado_em:
             tempo_decorrido = timezone.now() - usuario.token_criado_em
@@ -149,12 +161,12 @@ def confirmar_email(request, token):
                     'Por favor, solicite um novo link.'
                 )
                 return redirect('usuarios:login')
-        
+
         # Ativa a conta
         usuario.is_active = True
         usuario.token_ativacao = ''  # Limpa o token usado
         usuario.save()
-        
+
         messages.success(
             request,
             f'Conta ativada com sucesso! '
@@ -162,7 +174,7 @@ def confirmar_email(request, token):
             f'Agora você pode fazer login no sistema.'
         )
         return redirect('usuarios:login')
-        
+
     except Usuario.DoesNotExist:
         messages.error(
             request,
@@ -176,21 +188,21 @@ def reenviar_email_confirmacao(request):
     """View para reenviar email de ativação"""
     if request.method == 'POST':
         email = request.POST.get('email', '').lower()
-        
+
         try:
             usuario = Usuario.objects.get(email=email, is_active=False)
-            
+
             # Gera novo token
             usuario.gerar_token_ativacao()
             usuario.save()
-            
+
             # Envia email
             try:
                 link_ativacao = request.build_absolute_uri(
                     reverse('usuarios:ativar_conta',
                             args=[usuario.token_ativacao])
                 )
-                
+
                 assunto = 'Ative sua conta - Sistema de Agendamento UESPI'
                 mensagem = (
                     f'Olá, {usuario.get_full_name()}!\n\n'
@@ -201,7 +213,7 @@ def reenviar_email_confirmacao(request):
                     f'Atenciosamente,\n'
                     f'Equipe Sistema de Agendamento - UESPI'
                 )
-                
+
                 send_mail(
                     assunto,
                     mensagem,
@@ -209,7 +221,7 @@ def reenviar_email_confirmacao(request):
                     [usuario.email],
                     fail_silently=False,
                 )
-                
+
                 messages.success(
                     request,
                     f'Um novo e-mail de ativação foi enviado para '
@@ -227,9 +239,9 @@ def reenviar_email_confirmacao(request):
                 'Se o e-mail informado estiver cadastrado e pendente de '
                 'ativação, você receberá um novo link.'
             )
-        
+
         return redirect('usuarios:login')
-    
+
     return render(request, 'usuarios/reenviar_confirmacao.html')
 
 
@@ -454,4 +466,230 @@ def alterar_senha(request):
         request,
         'usuarios/alterar_senha.html',
         {'form': form}
+    )
+
+
+@login_required
+@responsavel_campus_required
+def lista_motoristas(request):
+    is_admin = request.user.is_administrador()
+    if is_admin:
+        motoristas = Usuario.objects.filter(
+            groups__name='Motoristas',
+        ).select_related('campus').order_by(
+            'campus__nome', 'first_name', 'last_name'
+        )
+    else:
+        motoristas = Usuario.objects.filter(
+            groups__name='Motoristas',
+            campus=request.user.campus,
+        ).order_by('first_name', 'last_name')
+    pagination = PaginationHelper(motoristas, 10)
+    motoristas_paginados = pagination.get_page(request.GET.get('page'))
+    return render(
+        request,
+        'usuarios/motoristas_lista.html',
+        {'motoristas': motoristas_paginados, 'is_admin': is_admin},
+    )
+
+
+@login_required
+@responsavel_campus_required
+def criar_motorista(request):
+    is_admin = request.user.is_administrador()
+    if request.method == 'POST':
+        form = CriarMotoristaForm(request.POST, admin_mode=is_admin)
+        if form.is_valid():
+            motorista = form.save(commit=False)
+            if is_admin:
+                motorista.campus = form.cleaned_data['campus']
+            else:
+                motorista.campus = request.user.campus
+            motorista.is_active = True
+            motorista.save()
+            grupo, _ = Group.objects.get_or_create(name='Motoristas')
+            motorista.groups.add(grupo)
+            messages.success(
+                request,
+                f'Motorista {motorista.get_full_name()} criado com sucesso!'
+            )
+            return redirect('usuarios:lista_motoristas')
+    else:
+        form = CriarMotoristaForm(admin_mode=is_admin)
+    return render(
+        request,
+        'usuarios/motorista_form.html',
+        {'form': form, 'titulo': 'Novo Motorista'},
+    )
+
+
+@login_required
+@responsavel_campus_required
+def editar_motorista(request, uuid):
+    is_admin = request.user.is_administrador()
+    if is_admin:
+        motorista = get_object_or_404(
+            Usuario, uuid=uuid, groups__name='Motoristas'
+        )
+    else:
+        motorista = get_object_or_404(
+            Usuario, uuid=uuid, groups__name='Motoristas',
+            campus=request.user.campus
+        )
+    if request.method == 'POST':
+        form = CriarMotoristaForm(
+            request.POST, instance=motorista, admin_mode=is_admin
+        )
+        if form.is_valid():
+            saved = form.save(commit=False)
+            if is_admin:
+                saved.campus = form.cleaned_data['campus']
+            saved.save()
+            messages.success(request, 'Motorista atualizado com sucesso!')
+            return redirect('usuarios:lista_motoristas')
+    else:
+        form = CriarMotoristaForm(instance=motorista, admin_mode=is_admin)
+    return render(
+        request,
+        'usuarios/motorista_form.html',
+        {'form': form, 'titulo': 'Editar Motorista', 'motorista': motorista},
+    )
+
+
+@login_required
+@responsavel_campus_required
+def desativar_motorista(request, uuid):
+    is_admin = request.user.is_administrador()
+    if is_admin:
+        motorista = get_object_or_404(
+            Usuario, uuid=uuid, groups__name='Motoristas'
+        )
+    else:
+        motorista = get_object_or_404(
+            Usuario, uuid=uuid, groups__name='Motoristas',
+            campus=request.user.campus
+        )
+    if request.method == 'POST':
+        motorista.is_active = not motorista.is_active
+        motorista.save()
+        status = 'ativado' if motorista.is_active else 'desativado'
+        messages.success(request, f'Motorista {status} com sucesso!')
+        return redirect('usuarios:lista_motoristas')
+    return render(
+        request,
+        'usuarios/motorista_desativar.html',
+        {'motorista': motorista},
+    )
+
+
+@login_required
+@responsavel_campus_required
+def lista_professores(request):
+    is_admin = request.user.is_administrador()
+    if is_admin:
+        professores = Usuario.objects.filter(
+            groups__name='Professores',
+        ).select_related('campus').order_by(
+            'campus__nome', 'first_name', 'last_name'
+        )
+    else:
+        professores = Usuario.objects.filter(
+            groups__name='Professores',
+            campus=request.user.campus,
+        ).order_by('first_name', 'last_name')
+    pagination = PaginationHelper(professores, 10)
+    professores_paginados = pagination.get_page(request.GET.get('page'))
+    return render(
+        request,
+        'usuarios/professores_lista.html',
+        {'professores': professores_paginados, 'is_admin': is_admin},
+    )
+
+
+@login_required
+@responsavel_campus_required
+def criar_professor(request):
+    is_admin = request.user.is_administrador()
+    if request.method == 'POST':
+        form = CriarProfessorForm(request.POST, admin_mode=is_admin)
+        if form.is_valid():
+            professor = form.save(commit=False)
+            if is_admin:
+                professor.campus = form.cleaned_data['campus']
+            else:
+                professor.campus = request.user.campus
+            professor.is_active = True
+            professor.save()
+            grupo, _ = Group.objects.get_or_create(name='Professores')
+            professor.groups.add(grupo)
+            messages.success(
+                request,
+                f'Professor {professor.get_full_name()} criado com sucesso!'
+            )
+            return redirect('usuarios:lista_professores')
+    else:
+        form = CriarProfessorForm(admin_mode=is_admin)
+    return render(
+        request,
+        'usuarios/professor_form.html',
+        {'form': form, 'titulo': 'Novo Professor'},
+    )
+
+
+@login_required
+@responsavel_campus_required
+def editar_professor(request, uuid):
+    is_admin = request.user.is_administrador()
+    if is_admin:
+        professor = get_object_or_404(
+            Usuario, uuid=uuid, groups__name='Professores'
+        )
+    else:
+        professor = get_object_or_404(
+            Usuario, uuid=uuid, groups__name='Professores',
+            campus=request.user.campus
+        )
+    if request.method == 'POST':
+        form = CriarProfessorForm(
+            request.POST, instance=professor, admin_mode=is_admin
+        )
+        if form.is_valid():
+            saved = form.save(commit=False)
+            if is_admin:
+                saved.campus = form.cleaned_data['campus']
+            saved.save()
+            messages.success(request, 'Professor atualizado com sucesso!')
+            return redirect('usuarios:lista_professores')
+    else:
+        form = CriarProfessorForm(instance=professor, admin_mode=is_admin)
+    return render(
+        request,
+        'usuarios/professor_form.html',
+        {'form': form, 'titulo': 'Editar Professor', 'professor': professor},
+    )
+
+
+@login_required
+@responsavel_campus_required
+def desativar_professor(request, uuid):
+    is_admin = request.user.is_administrador()
+    if is_admin:
+        professor = get_object_or_404(
+            Usuario, uuid=uuid, groups__name='Professores'
+        )
+    else:
+        professor = get_object_or_404(
+            Usuario, uuid=uuid, groups__name='Professores',
+            campus=request.user.campus
+        )
+    if request.method == 'POST':
+        professor.is_active = not professor.is_active
+        professor.save()
+        status = 'ativado' if professor.is_active else 'desativado'
+        messages.success(request, f'Professor {status} com sucesso!')
+        return redirect('usuarios:lista_professores')
+    return render(
+        request,
+        'usuarios/professor_desativar.html',
+        {'professor': professor},
     )

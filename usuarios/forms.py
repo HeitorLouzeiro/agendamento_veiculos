@@ -3,6 +3,8 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 
+from campus.models import Campus
+
 from .models import Usuario
 
 # Perguntas padrão disponíveis
@@ -57,10 +59,19 @@ class RegistroForm(UserCreationForm):
         })
     )
 
+    campus = forms.ModelChoiceField(
+        queryset=Campus.objects.filter(ativo=True),
+        required=True,
+        label='Campus',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label='— Selecione um campus —',
+    )
+
     class Meta:
         model = Usuario
         fields = [
             'username', 'email', 'first_name', 'last_name', 'telefone',
+            'campus',
             'password1', 'password2',
             'pergunta_seguranca_1', 'resposta_seguranca_1',
             'pergunta_seguranca_2', 'resposta_seguranca_2'
@@ -115,11 +126,11 @@ class RegistroForm(UserCreationForm):
             # Aceita emails que terminam com @*.uespi.br
             # Exemplos: @uespi.br, @aluno.uespi.br, @professor.uespi.br
             if not (email.endswith('.uespi.br') or
-                        email.endswith('@uespi.br')):
-                 raise forms.ValidationError(
+                    email.endswith('@uespi.br')):
+                raise forms.ValidationError(
                     'Por favor, utilize um e-mail institucional da UESPI '
-                     '(@uespi.br ou @*.uespi.br). '
-                     'Exemplo: nome@professor.uespi.br'
+                    '(@uespi.br ou @*.uespi.br). '
+                    'Exemplo: nome@professor.uespi.br'
                 )
             # Verifica se já existe (exceto o próprio usuário em edição)
             if Usuario.objects.filter(email=email).exists():
@@ -151,9 +162,12 @@ class RegistroForm(UserCreationForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.tipo_usuario = 'professor'  # Define como professor por padrão
+        user.campus = self.cleaned_data.get('campus')
         if commit:
             user.save()
+            from django.contrib.auth.models import Group
+            grupo, _ = Group.objects.get_or_create(name='Professores')
+            user.groups.add(grupo)
         return user
 
 
@@ -313,13 +327,13 @@ class EditarPerfilForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
+
         # Formata o telefone ao carregar para exibição
         if self.instance and self.instance.telefone:
             telefone = self.instance.telefone
             # Remove formatação existente
             telefone_limpo = ''.join(filter(str.isdigit, telefone))
-            
+
             # Aplica formatação
             if len(telefone_limpo) == 11:
                 # (XX) XXXXX-XXXX
@@ -418,3 +432,165 @@ class AlterarSenhaForm(forms.Form):
                 raise forms.ValidationError('As novas senhas não conferem.')
 
         return cleaned_data
+
+
+class CriarMotoristaForm(UserCreationForm):
+    """Formulário para criar/editar motoristas.
+
+    Aceita admin_mode=True para exibir seletor de campus (obrigatório).
+    Quando False, campus é omitido do form e definido pela view.
+    """
+    first_name = forms.CharField(
+        required=True,
+        label='Nome',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    last_name = forms.CharField(
+        required=True,
+        label='Sobrenome',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    email = forms.EmailField(
+        required=True,
+        label='E-mail',
+        widget=forms.EmailInput(attrs={'class': 'form-control'}),
+    )
+    telefone = forms.CharField(
+        required=False,
+        label='Telefone',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '(00) 00000-0000',
+        }),
+    )
+    numero_habilitacao = forms.CharField(
+        required=False,
+        label='Número da CNH',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    campus = forms.ModelChoiceField(
+        queryset=Campus.objects.filter(ativo=True),
+        required=False,
+        label='Campus',
+        widget=forms.Select(attrs={'class': 'form-select select2-campus'}),
+        empty_label='— Selecione ou digite o nome do campus —',
+    )
+
+    class Meta:
+        model = Usuario
+        fields = [
+            'username', 'first_name', 'last_name', 'email',
+            'telefone', 'numero_habilitacao',
+            'password1', 'password2',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        self.admin_mode = kwargs.pop('admin_mode', False)
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+        if self.admin_mode:
+            self.fields['campus'].required = True
+            if self.instance and self.instance.pk:
+                self.fields['campus'].initial = self.instance.campus
+        else:
+            del self.fields['campus']
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username', '').lower()
+        qs = Usuario.objects.filter(username=username)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(
+                'Este nome de usuário já está em uso.'
+            )
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').lower()
+        qs = Usuario.objects.filter(email=email)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('Este e-mail já está cadastrado.')
+        return email
+
+
+class CriarProfessorForm(UserCreationForm):
+    """Formulário para criar/editar professores.
+
+    Aceita admin_mode=True para exibir seletor de campus (obrigatório).
+    Quando False, campus é omitido do form e definido pela view.
+    """
+    first_name = forms.CharField(
+        required=True,
+        label='Nome',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    last_name = forms.CharField(
+        required=True,
+        label='Sobrenome',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    email = forms.EmailField(
+        required=True,
+        label='E-mail',
+        widget=forms.EmailInput(attrs={'class': 'form-control'}),
+    )
+    telefone = forms.CharField(
+        required=False,
+        label='Telefone',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '(00) 00000-0000',
+        }),
+    )
+    campus = forms.ModelChoiceField(
+        queryset=Campus.objects.filter(ativo=True),
+        required=False,
+        label='Campus',
+        widget=forms.Select(attrs={'class': 'form-select select2-campus'}),
+        empty_label='— Selecione ou digite o nome do campus —',
+    )
+
+    class Meta:
+        model = Usuario
+        fields = [
+            'username', 'first_name', 'last_name', 'email',
+            'telefone', 'password1', 'password2',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        self.admin_mode = kwargs.pop('admin_mode', False)
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+        if self.admin_mode:
+            self.fields['campus'].required = True
+            if self.instance and self.instance.pk:
+                self.fields['campus'].initial = self.instance.campus
+        else:
+            del self.fields['campus']
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username', '').lower()
+        qs = Usuario.objects.filter(username=username)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(
+                'Este nome de usuário já está em uso.'
+            )
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').lower()
+        qs = Usuario.objects.filter(email=email)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('Este e-mail já está cadastrado.')
+        return email
