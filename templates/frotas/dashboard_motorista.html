@@ -7,6 +7,95 @@
     <h2 class="mb-4"><i class="bi bi-person-badge"></i> Área do Motorista</h2>
     <p class="text-muted">Olá, <strong>{{ user.get_full_name|default:user.username }}</strong>!</p>
 
+    {# ── Agendamentos com Trajetos Atribuídos ── #}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Meus Agendamentos</h5>
+            {% if agendamentos_atribuidos %}
+            <span class="badge bg-primary">{{ agendamentos_atribuidos|length }}</span>
+            {% endif %}
+        </div>
+        <div class="card-body p-0">
+            {% if agendamentos_atribuidos %}
+            <div class="accordion accordion-flush" id="accordionAgendamentos">
+                {% for ag in agendamentos_atribuidos %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#ag-{{ ag.pk|slugify }}"
+                                aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}">
+                            <div class="d-flex align-items-center gap-3 flex-wrap w-100 me-3">
+                                <strong><i class="bi bi-car-front"></i> {{ ag.veiculo.placa }}</strong>
+                                <span class="text-muted">{{ ag.curso.nome }}</span>
+                                <small class="text-muted ms-auto">
+                                    {{ ag.data_inicio|date:"d/m/Y" }} → {{ ag.data_fim|date:"d/m/Y" }}
+                                </small>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="ag-{{ ag.pk|slugify }}"
+                         class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                         data-bs-parent="#accordionAgendamentos">
+                        <div class="accordion-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Rota</th>
+                                            <th>Saída</th>
+                                            <th>Chegada</th>
+                                            <th>Km</th>
+                                            <th class="text-end">Registrar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for t in ag.meus_trajetos %}
+                                        <tr>
+                                            <td>
+                                                {% if t.origem %}<small class="text-muted">{{ t.origem }} →</small><br>{% endif %}
+                                                <strong>{{ t.destino }}</strong>
+                                            </td>
+                                            <td>{{ t.data_saida|date:"d/m/Y H:i" }}</td>
+                                            <td>{{ t.data_chegada|date:"d/m/Y H:i" }}</td>
+                                            <td>{{ t.quilometragem }} km</td>
+                                            <td class="text-end">
+                                                <a href="{% url 'frotas:criar_deslocamento' %}?trajeto={{ t.pk }}"
+                                                   class="btn btn-sm btn-outline-success"
+                                                   title="Registrar Deslocamento">
+                                                    <i class="bi bi-sign-turn-right"></i>
+                                                </a>
+                                                <a href="{% url 'frotas:criar_abastecimento' %}?trajeto={{ t.pk }}"
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="Registrar Abastecimento">
+                                                    <i class="bi bi-fuel-pump"></i>
+                                                </a>
+                                                <a href="{% url 'frotas:criar_ocorrencia' %}?trajeto={{ t.pk }}"
+                                                   class="btn btn-sm btn-outline-warning"
+                                                   title="Registrar Ocorrência">
+                                                    <i class="bi bi-exclamation-circle"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="p-4">
+                <p class="text-muted mb-0">Nenhum agendamento com trajeto atribuído.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Registros Recentes ── #}
     <div class="row g-4">
         <div class="col-md-6">
             <div class="card h-100">
@@ -19,7 +108,7 @@
                         {% for a in abastecimentos_recentes %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <strong>{{ a.veiculo.placa }}</strong> — {{ a.local_posto }}
+                                <strong>{{ a.veiculo.placa|default:"—" }}</strong> — {{ a.local_posto }}
                                 <br><small class="text-muted">{{ a.data_hora|date:"d/m/Y H:i" }} | {{ a.litros_abastecidos }} L | R$ {{ a.valor_gasto }}</small>
                             </div>
                             <a href="{% url 'frotas:detalhe_abastecimento' a.pk %}" class="btn btn-sm btn-outline-secondary">
@@ -54,7 +143,7 @@
                         {% for o in ocorrencias_recentes %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <strong>{{ o.get_tipo_display }}</strong> — {{ o.veiculo.placa }}
+                                <strong>{{ o.get_tipo_display }}</strong> — {{ o.veiculo.placa|default:"—" }}
                                 <br><small class="text-muted">{{ o.data_hora|date:"d/m/Y H:i" }} | {{ o.local }}</small>
                             </div>
                             <div class="d-flex gap-1 align-items-center">
@@ -80,6 +169,46 @@
                     </a>
                     <a href="{% url 'frotas:lista_ocorrencias' %}" class="btn btn-outline-secondary">
                         <i class="bi bi-list-ul"></i> Ver Todas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-sign-turn-right"></i> Últimos Deslocamentos</h5>
+                </div>
+                <div class="card-body">
+                    {% if deslocamentos_recentes %}
+                    <ul class="list-group list-group-flush">
+                        {% for d in deslocamentos_recentes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ d.veiculo.placa|default:"—" }}</strong> → {{ d.destino }}
+                                <br><small class="text-muted">
+                                    {{ d.data_hora_saida|date:"d/m/Y H:i" }}
+                                    {% if d.km_percorridos is not None %}| {{ d.km_percorridos }} km{% endif %}
+                                </small>
+                            </div>
+                            <a href="{% url 'frotas:detalhe_deslocamento' d.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted">Nenhum deslocamento registrado.</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'frotas:criar_deslocamento' %}" class="btn btn-success me-2">
+                        <i class="bi bi-plus-circle"></i> Novo Deslocamento
+                    </a>
+                    <a href="{% url 'frotas:lista_deslocamentos' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-list-ul"></i> Ver Todos
                     </a>
                 </div>
             </div>

@@ -425,6 +425,10 @@ def dashboard_motorista(request):
         messages.error(request, 'Área exclusiva para motoristas.')
         return redirect('dashboard')
 
+    from django.db.models import Prefetch
+    from agendamentos.models import Agendamento, Trajeto
+    from ..models import Deslocamento
+
     abastecimentos = (
         Abastecimento.objects
         .filter(motorista=user)
@@ -435,9 +439,32 @@ def dashboard_motorista(request):
         .filter(motorista=user)
         .select_related('veiculo')[:5]
     )
+    deslocamentos = (
+        Deslocamento.objects
+        .filter(motorista=user)
+        .select_related('veiculo')[:5]
+    )
+    agendamentos_atribuidos = (
+        Agendamento.objects
+        .filter(trajetos__motorista=user)
+        .distinct()
+        .select_related('veiculo', 'curso')
+        .prefetch_related(
+            Prefetch(
+                'trajetos',
+                queryset=Trajeto.objects
+                    .filter(motorista=user)
+                    .order_by('data_saida'),
+                to_attr='meus_trajetos',
+            )
+        )
+        .order_by('data_inicio')
+    )
     return render(request, 'frotas/dashboard_motorista.html', {
         'abastecimentos_recentes': abastecimentos,
         'ocorrencias_recentes': ocorrencias,
+        'deslocamentos_recentes': deslocamentos,
+        'agendamentos_atribuidos': agendamentos_atribuidos,
     })
 
 
