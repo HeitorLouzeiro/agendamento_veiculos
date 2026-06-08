@@ -178,6 +178,14 @@ class Trajeto(models.Model):
         related_name='trajetos',
         verbose_name='Agendamento'
     )
+    motorista = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='trajetos_atribuidos',
+        verbose_name='Motorista',
+    )
     origem = models.CharField(max_length=200, verbose_name='Origem')
     destino = models.CharField(max_length=200, verbose_name='Destino')
     data_saida = models.DateTimeField(verbose_name='Data/Hora de Saída')

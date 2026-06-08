@@ -5,7 +5,10 @@ from .models import Agendamento, Trajeto
 class TrajetoInline(admin.TabularInline):
     model = Trajeto
     extra = 1
-    fields = ['origem', 'destino', 'data_saida', 'data_chegada', 'quilometragem', 'descricao']
+    fields = [
+        'motorista', 'origem', 'destino',
+        'data_saida', 'data_chegada', 'quilometragem', 'descricao',
+    ]
 
 
 @admin.register(Agendamento)
@@ -23,6 +26,6 @@ class AgendamentoAdmin(admin.ModelAdmin):
 
 @admin.register(Trajeto)
 class TrajetoAdmin(admin.ModelAdmin):
-    list_display = ['agendamento', 'origem', 'destino', 'data_saida', 'quilometragem']
+    list_display = ['agendamento', 'motorista', 'origem', 'destino', 'data_saida', 'quilometragem']
     list_filter = ['data_saida']
     search_fields = ['origem', 'destino', 'agendamento__curso__nome']
