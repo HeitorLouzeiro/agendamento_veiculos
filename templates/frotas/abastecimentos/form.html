@@ -11,52 +11,75 @@
                     <h4 class="mb-0"><i class="bi bi-fuel-pump"></i> {{ titulo }}</h4>
                 </div>
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" id="form-abastecimento">
                         {% csrf_token %}
 
                         <div class="row g-3">
+
+                            {# ── Trajeto ── #}
+                            <div class="col-12">
+                                <label class="form-label">{{ form.trajeto.label }}</label>
+                                {{ form.trajeto }}
+                                <div class="form-text">Selecione um trajeto para preencher automaticamente o veículo e agendamento.</div>
+                            </div>
+
+                            {# ── Veículo (somente-leitura quando trajeto selecionado) ── #}
                             <div class="col-md-6">
                                 <label class="form-label">{{ form.veiculo.label }}</label>
-                                {{ form.veiculo }}
+                                <div id="veiculo-display" class="form-control bg-light text-muted d-none"></div>
+                                <input type="hidden" id="id_veiculo_hidden" name="veiculo">
+                                <div id="veiculo-select-wrap">{{ form.veiculo }}</div>
                                 {% if form.veiculo.errors %}<div class="text-danger small">{{ form.veiculo.errors }}</div>{% endif %}
                             </div>
+
                             <div class="col-md-6">
                                 <label class="form-label">{{ form.tipo_combustivel.label }}</label>
                                 {{ form.tipo_combustivel }}
                             </div>
+
                             <div class="col-md-6">
                                 <label class="form-label">{{ form.data_hora.label }}</label>
                                 {{ form.data_hora }}
                                 {% if form.data_hora.errors %}<div class="text-danger small">{{ form.data_hora.errors }}</div>{% endif %}
                             </div>
+
                             <div class="col-md-6">
                                 <label class="form-label">{{ form.local_posto.label }}</label>
                                 {{ form.local_posto }}
                                 {% if form.local_posto.errors %}<div class="text-danger small">{{ form.local_posto.errors }}</div>{% endif %}
                             </div>
+
                             <div class="col-md-4">
                                 <label class="form-label">{{ form.km_atual.label }}</label>
                                 {{ form.km_atual }}
                                 {% if form.km_atual.errors %}<div class="text-danger small">{{ form.km_atual.errors }}</div>{% endif %}
                             </div>
+
                             <div class="col-md-4">
                                 <label class="form-label">{{ form.litros_abastecidos.label }}</label>
                                 {{ form.litros_abastecidos }}
                                 {% if form.litros_abastecidos.errors %}<div class="text-danger small">{{ form.litros_abastecidos.errors }}</div>{% endif %}
                             </div>
+
                             <div class="col-md-4">
                                 <label class="form-label">{{ form.valor_gasto.label }}</label>
                                 {{ form.valor_gasto }}
                                 {% if form.valor_gasto.errors %}<div class="text-danger small">{{ form.valor_gasto.errors }}</div>{% endif %}
                             </div>
+
+                            {# ── Agendamento (somente-leitura quando trajeto selecionado) ── #}
                             <div class="col-12">
                                 <label class="form-label">{{ form.agendamento.label }} <span class="text-muted">(opcional)</span></label>
-                                {{ form.agendamento }}
+                                <div id="agendamento-display" class="form-control bg-light text-muted d-none"></div>
+                                <input type="hidden" id="id_agendamento_hidden" name="agendamento">
+                                <div id="agendamento-select-wrap">{{ form.agendamento }}</div>
                             </div>
+
                             <div class="col-12">
                                 <label class="form-label">{{ form.observacoes.label }} <span class="text-muted">(opcional)</span></label>
                                 {{ form.observacoes }}
                             </div>
+
                         </div>
 
                         <div class="d-flex justify-content-between mt-4">
@@ -73,4 +96,60 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const trajetoSelect = document.getElementById('id_trajeto');
+    if (!trajetoSelect) return;
+
+    const veiculoDisplay    = document.getElementById('veiculo-display');
+    const veiculoSelectWrap = document.getElementById('veiculo-select-wrap');
+    const veiculoHidden     = document.getElementById('id_veiculo_hidden');
+    const agendDisplay      = document.getElementById('agendamento-display');
+    const agendSelectWrap   = document.getElementById('agendamento-select-wrap');
+    const agendHidden       = document.getElementById('id_agendamento_hidden');
+
+    function lockFields(lock) {
+        if (lock) {
+            veiculoDisplay.classList.remove('d-none');
+            veiculoSelectWrap.classList.add('d-none');
+            agendDisplay.classList.remove('d-none');
+            agendSelectWrap.classList.add('d-none');
+        } else {
+            veiculoDisplay.classList.add('d-none');
+            veiculoSelectWrap.classList.remove('d-none');
+            agendDisplay.classList.add('d-none');
+            agendSelectWrap.classList.remove('d-none');
+            veiculoHidden.value = '';
+            agendHidden.value = '';
+        }
+    }
+
+    function loadTrajeto(trajetoId) {
+        if (!trajetoId) { lockFields(false); return; }
+
+        fetch(`/frotas/deslocamentos/trajeto/${trajetoId}/detalhes/`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.erro) { lockFields(false); return; }
+            veiculoDisplay.textContent = data.veiculo_texto;
+            veiculoHidden.value = data.veiculo_id;
+            agendDisplay.textContent = data.agendamento_texto;
+            agendHidden.value = data.agendamento_id;
+            lockFields(true);
+        })
+        .catch(() => lockFields(false));
+    }
+
+    trajetoSelect.addEventListener('change', function () {
+        loadTrajeto(this.value);
+    });
+
+    if (trajetoSelect.value) loadTrajeto(trajetoSelect.value);
+})();
+</script>
 {% endblock %}

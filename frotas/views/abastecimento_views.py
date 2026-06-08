@@ -46,7 +46,10 @@ def criar_abastecimento(request):
             messages.success(request, 'Abastecimento registrado com sucesso!')
             return redirect('frotas:lista_abastecimentos')
     else:
-        form = AbastecimentoForm(motorista=user, is_admin=is_admin)
+        initial = {}
+        if pk := request.GET.get('trajeto'):
+            initial['trajeto'] = pk
+        form = AbastecimentoForm(motorista=user, is_admin=is_admin, initial=initial)
 
     return render(
         request,
