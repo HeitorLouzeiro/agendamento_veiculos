@@ -15,7 +15,7 @@ from common.pagination import PaginationHelper
 from cursos.models import Curso
 
 from ..forms import AgendamentoForm, TrajetoFormSet, TrajetoFormSetEdit
-from ..models import Agendamento
+from ..models import Agendamento, Trajeto
 from ..services import AgendamentoService, RelatorioService
 
 
@@ -154,8 +154,9 @@ def detalhe_agendamento(request, pk):
     # - Outros professores não podem ver detalhes
     is_owner = agendamento.professor == request.user
     is_admin = request.user.is_administrador()
+    is_responsavel = request.user.is_responsavel_campus()
 
-    if not is_admin and not is_owner:
+    if not is_admin and not is_responsavel and not is_owner:
         messages.error(
             request,
             'Você não tem permissão para visualizar este agendamento.'
@@ -168,14 +169,26 @@ def detalhe_agendamento(request, pk):
         agendamento.professor == request.user
     )
 
-    trajetos = agendamento.trajetos.all()
+    trajetos = agendamento.trajetos.select_related('motorista').all()
     total_km = agendamento.get_total_km()
+
+    # Lista de motoristas disponíveis para atribuição (admin/responsável)
+    motoristas = []
+    if is_admin or is_responsavel:
+        from usuarios.models import Usuario
+        motoristas = (
+            Usuario.objects
+            .filter(groups__name='Motoristas', is_active=True)
+            .order_by('first_name', 'last_name')
+        )
 
     context = {
         'agendamento': agendamento,
         'trajetos': trajetos,
         'total_km': total_km,
-        'can_edit': can_edit
+        'can_edit': can_edit,
+        'motoristas': motoristas,
+        'can_atribuir': is_admin or is_responsavel,
     }
 
     return render(request, 'agendamentos/detalhe.html', context)
@@ -203,3 +216,33 @@ def deletar_agendamento(request, pk):
 
     context = {'agendamento': agendamento}
     return render(request, 'agendamentos/deletar.html', context)
+
+
+@login_required
+def atribuir_motorista_trajeto(request, pk):
+    """Atribui ou remove motorista de um trajeto (admin/responsável)."""
+    if not (request.user.is_administrador() or request.user.is_responsavel_campus()):
+        messages.error(request, 'Acesso não autorizado.')
+        return redirect('agendamentos:lista')
+
+    trajeto = get_object_or_404(Trajeto, pk=pk)
+
+    if request.method == 'POST':
+        motorista_id = request.POST.get('motorista_id') or None
+        if motorista_id:
+            from usuarios.models import Usuario
+            motorista = get_object_or_404(
+                Usuario, pk=motorista_id, groups__name='Motoristas'
+            )
+            trajeto.motorista = motorista
+            nome = motorista.get_full_name() or motorista.username
+            messages.success(
+                request,
+                f'Motorista "{nome}" atribuído ao trajeto com sucesso.',
+            )
+        else:
+            trajeto.motorista = None
+            messages.success(request, 'Motorista removido do trajeto.')
+        trajeto.save(update_fields=['motorista'])
+
+    return redirect('agendamentos:detalhe', pk=trajeto.agendamento_id)

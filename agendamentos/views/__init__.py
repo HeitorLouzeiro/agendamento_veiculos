@@ -18,9 +18,9 @@ from .aprovacao_views import (aprovacao_agendamentos, aprovar_agendamento,
 # Importar views de calendário
 from .calendario_views import agendamentos_json
 # Importar views CRUD
-from .crud_views import (criar_agendamento, deletar_agendamento,
-                         detalhe_agendamento, editar_agendamento,
-                         lista_agendamentos)
+from .crud_views import (atribuir_motorista_trajeto, criar_agendamento,
+                         deletar_agendamento, detalhe_agendamento,
+                         editar_agendamento, lista_agendamentos)
 # Importar views de exportação
 from .export_views import (exportar_curso_excel, exportar_professor_excel,
                            exportar_professor_pdf, exportar_relatorio_excel,
@@ -37,6 +37,7 @@ __all__ = [
     'editar_agendamento',
     'detalhe_agendamento',
     'deletar_agendamento',
+    'atribuir_motorista_trajeto',
     # Aprovação
     'aprovacao_agendamentos',
     'aprovar_agendamento',

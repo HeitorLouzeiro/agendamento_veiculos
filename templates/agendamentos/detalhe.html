@@ -77,7 +77,7 @@
                 <div class="card-body">
                     {% if trajetos %}
                     {% for trajeto in trajetos %}
-                    <div class="card mb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                    <div class="card mb-3">
                         <div class="card-body">
                             <h6 class="card-title">
                                 <i class="bi bi-signpost-2"></i> {{ trajeto.origem }} → {{ trajeto.destino }}
@@ -99,6 +99,39 @@
                             <div class="mt-2">
                                 <small class="text-muted">Descrição:</small><br>
                                 {{ trajeto.descricao }}
+                            </div>
+
+                            <div class="mt-3 pt-2 border-top d-flex align-items-center gap-3 flex-wrap">
+                                <div>
+                                    <small class="text-muted">Motorista:</small><br>
+                                    {% if trajeto.motorista %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-person-badge"></i>
+                                        {{ trajeto.motorista.get_full_name|default:trajeto.motorista.username }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Não atribuído</span>
+                                    {% endif %}
+                                </div>
+                                {% if can_atribuir %}
+                                <form method="post"
+                                      action="{% url 'agendamentos:atribuir_motorista_trajeto' trajeto.pk %}"
+                                      class="d-flex align-items-center gap-2 flex-wrap">
+                                    {% csrf_token %}
+                                    <select name="motorista_id" class="form-select form-select-sm" style="min-width:200px;">
+                                        <option value="">— Remover motorista —</option>
+                                        {% for m in motoristas %}
+                                        <option value="{{ m.pk }}"
+                                            {% if trajeto.motorista_id == m.pk %}selected{% endif %}>
+                                            {{ m.get_full_name|default:m.username }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-person-check"></i> Atribuir
+                                    </button>
+                                </form>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
