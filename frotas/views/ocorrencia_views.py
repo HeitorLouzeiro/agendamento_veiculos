@@ -40,14 +40,20 @@ def criar_ocorrencia(request):
         )
         if form.is_valid():
             ocorrencia = form.save(commit=False)
-            ocorrencia.veiculo = ocorrencia.agendamento.veiculo
+            if ocorrencia.agendamento:
+                ocorrencia.veiculo = ocorrencia.agendamento.veiculo
+            elif ocorrencia.trajeto:
+                ocorrencia.veiculo = ocorrencia.trajeto.agendamento.veiculo
             if not is_admin:
                 ocorrencia.motorista = user
             ocorrencia.save()
             messages.success(request, 'Ocorrência registrada com sucesso!')
             return redirect('frotas:lista_ocorrencias')
     else:
-        form = OcorrenciaForm(motorista=user, is_admin=is_admin)
+        initial = {}
+        if pk := request.GET.get('trajeto'):
+            initial['trajeto'] = pk
+        form = OcorrenciaForm(motorista=user, is_admin=is_admin, initial=initial)
 
     return render(
         request,
@@ -89,7 +95,10 @@ def editar_ocorrencia(request, pk):
         )
         if form.is_valid():
             ocorrencia = form.save(commit=False)
-            ocorrencia.veiculo = ocorrencia.agendamento.veiculo
+            if ocorrencia.agendamento:
+                ocorrencia.veiculo = ocorrencia.agendamento.veiculo
+            elif ocorrencia.trajeto:
+                ocorrencia.veiculo = ocorrencia.trajeto.agendamento.veiculo
             ocorrencia.save()
             messages.success(request, 'Ocorrência atualizada!')
             return redirect('frotas:detalhe_ocorrencia', pk=pk)
