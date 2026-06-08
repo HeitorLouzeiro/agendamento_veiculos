@@ -14,9 +14,19 @@ class Abastecimento(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    trajeto = models.ForeignKey(
+        'agendamentos.Trajeto',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='abastecimentos',
+        verbose_name='Trajeto Atribuído',
+    )
     veiculo = models.ForeignKey(
         'veiculos.Veiculo',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='abastecimentos',
         verbose_name='Veículo',
     )
@@ -69,6 +79,69 @@ class Abastecimento(models.Model):
         return None
 
 
+class Deslocamento(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    motorista = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='deslocamentos',
+        verbose_name='Motorista',
+    )
+    trajeto = models.ForeignKey(
+        'agendamentos.Trajeto',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deslocamentos',
+        verbose_name='Trajeto Atribuído',
+    )
+    veiculo = models.ForeignKey(
+        'veiculos.Veiculo',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deslocamentos',
+        verbose_name='Veículo',
+    )
+    agendamento = models.ForeignKey(
+        'agendamentos.Agendamento',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deslocamentos',
+        verbose_name='Agendamento Relacionado',
+    )
+    origem = models.CharField(max_length=200, blank=True, verbose_name='Origem')
+    destino = models.CharField(max_length=200, verbose_name='Destino')
+    data_hora_saida = models.DateTimeField(verbose_name='Data/Hora de Saída')
+    data_hora_chegada = models.DateTimeField(
+        null=True, blank=True, verbose_name='Data/Hora de Chegada'
+    )
+    km_saida = models.PositiveIntegerField(verbose_name='Km na Saída')
+    km_chegada = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name='Km na Chegada'
+    )
+    observacoes = models.TextField(blank=True, verbose_name='Observações')
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
+
+    class Meta:
+        verbose_name = 'Deslocamento'
+        verbose_name_plural = 'Deslocamentos'
+        ordering = ['-data_hora_saida']
+
+    def __str__(self):
+        dt = self.data_hora_saida.strftime('%d/%m/%Y %H:%M')
+        return f'{self.veiculo.placa} → {self.destino} — {dt}'
+
+    @property
+    def km_percorridos(self):
+        if self.km_chegada is not None and self.km_saida is not None:
+            return self.km_chegada - self.km_saida
+        return None
+
+
 class Ocorrencia(models.Model):
     TIPO_CHOICES = [
         ('acidente', 'Acidente'),
@@ -86,15 +159,27 @@ class Ocorrencia(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    trajeto = models.ForeignKey(
+        'agendamentos.Trajeto',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ocorrencias',
+        verbose_name='Trajeto Atribuído',
+    )
     agendamento = models.ForeignKey(
         'agendamentos.Agendamento',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='ocorrencias',
         verbose_name='Agendamento',
     )
     veiculo = models.ForeignKey(
         'veiculos.Veiculo',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='ocorrencias',
         verbose_name='Veículo',
     )

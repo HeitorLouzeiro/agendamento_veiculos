@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}Deslocamento — {{ deslocamento.destino }} - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-sign-turn-right"></i>
+                        Deslocamento: {{ deslocamento.veiculo.placa }} → {{ deslocamento.destino }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <small class="text-muted">Veículo</small>
+                            <p class="mb-0"><strong>{{ deslocamento.veiculo.placa }}</strong> — {{ deslocamento.veiculo }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">Motorista</small>
+                            <p class="mb-0">{{ deslocamento.motorista.get_full_name|default:deslocamento.motorista.username }}</p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">Rota</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <small class="text-muted">Origem</small>
+                            <p class="mb-0">{{ deslocamento.origem|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">Destino</small>
+                            <p class="mb-0"><strong>{{ deslocamento.destino }}</strong></p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">Datas e Horários</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <small class="text-muted">Saída</small>
+                            <p class="mb-0">{{ deslocamento.data_hora_saida|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">Chegada</small>
+                            <p class="mb-0">
+                                {% if deslocamento.data_hora_chegada %}
+                                    {{ deslocamento.data_hora_chegada|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    <span class="text-muted">Não registrada</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">Odômetro</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <small class="text-muted">Km na Saída</small>
+                            <p class="mb-0">{{ deslocamento.km_saida }} km</p>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">Km na Chegada</small>
+                            <p class="mb-0">
+                                {% if deslocamento.km_chegada is not None %}
+                                    {{ deslocamento.km_chegada }} km
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">Km Percorridos</small>
+                            <p class="mb-0">
+                                {% if deslocamento.km_percorridos is not None %}
+                                    <span class="badge bg-info text-dark fs-6">{{ deslocamento.km_percorridos }} km</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    {% if deslocamento.agendamento %}
+                    <hr>
+                    <h6 class="mb-2">Agendamento Vinculado</h6>
+                    <p class="mb-0">{{ deslocamento.agendamento }}</p>
+                    {% endif %}
+
+                    {% if deslocamento.observacoes %}
+                    <hr>
+                    <h6 class="mb-2">Observações</h6>
+                    <p class="mb-0">{{ deslocamento.observacoes }}</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-muted small">
+                    Registrado em {{ deslocamento.criado_em|date:"d/m/Y H:i" }}
+                    {% if deslocamento.atualizado_em != deslocamento.criado_em %}
+                    · Atualizado em {{ deslocamento.atualizado_em|date:"d/m/Y H:i" }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Ações</h6>
+                </div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{% url 'frotas:editar_deslocamento' deslocamento.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+                    <a href="{% url 'frotas:deletar_deslocamento' deslocamento.pk %}" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> Excluir
+                    </a>
+                    <a href="{% url 'frotas:lista_deslocamentos' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Voltar à Lista
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

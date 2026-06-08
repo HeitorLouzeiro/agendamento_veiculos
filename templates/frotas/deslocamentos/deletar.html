@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Excluir Deslocamento - Sistema de Agendamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-trash"></i> Confirmar Exclusão</h5>
+                </div>
+                <div class="card-body">
+                    <p>Tem certeza que deseja excluir o deslocamento abaixo?</p>
+                    <ul class="list-unstyled mb-4">
+                        <li><strong>Veículo:</strong> {{ deslocamento.veiculo.placa }}</li>
+                        <li><strong>Destino:</strong> {{ deslocamento.destino }}</li>
+                        <li><strong>Saída:</strong> {{ deslocamento.data_hora_saida|date:"d/m/Y H:i" }}</li>
+                        {% if deslocamento.km_percorridos is not None %}
+                        <li><strong>Km Percorridos:</strong> {{ deslocamento.km_percorridos }} km</li>
+                        {% endif %}
+                    </ul>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Sim, excluir
+                            </button>
+                            <a href="{% url 'frotas:detalhe_deslocamento' deslocamento.pk %}" class="btn btn-outline-secondary">
+                                Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

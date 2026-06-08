@@ -9,6 +9,16 @@ urlpatterns = [
     path('motorista/', views.dashboard_motorista, name='dashboard_motorista'),
     path('responsavel/', views.dashboard_responsavel, name='dashboard_responsavel'),
 
+    # Deslocamentos
+    path('deslocamentos/trajeto/<uuid:pk>/detalhes/',
+         views.trajeto_detalhes_json,
+         name='trajeto_detalhes_json'),
+    path('deslocamentos/', views.lista_deslocamentos, name='lista_deslocamentos'),
+    path('deslocamentos/novo/', views.criar_deslocamento, name='criar_deslocamento'),
+    path('deslocamentos/<uuid:pk>/', views.detalhe_deslocamento, name='detalhe_deslocamento'),
+    path('deslocamentos/<uuid:pk>/editar/', views.editar_deslocamento, name='editar_deslocamento'),
+    path('deslocamentos/<uuid:pk>/deletar/', views.deletar_deslocamento, name='deletar_deslocamento'),
+
     # Abastecimentos
     path('abastecimentos/', views.lista_abastecimentos, name='lista_abastecimentos'),
     path('abastecimentos/novo/', views.criar_abastecimento, name='criar_abastecimento'),

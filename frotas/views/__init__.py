@@ -1,3 +1,11 @@
+from .deslocamento_views import (  # noqa: F401
+    criar_deslocamento,
+    deletar_deslocamento,
+    detalhe_deslocamento,
+    editar_deslocamento,
+    lista_deslocamentos,
+    trajeto_detalhes_json,
+)
 from .abastecimento_views import (  # noqa: F401
     criar_abastecimento,
     deletar_abastecimento,

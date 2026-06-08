@@ -1,6 +1,17 @@
 from django.contrib import admin
 
-from .models import Abastecimento, Ocorrencia
+from .models import Abastecimento, Deslocamento, Ocorrencia
+
+
+@admin.register(Deslocamento)
+class DeslocamentoAdmin(admin.ModelAdmin):
+    list_display = [
+        'motorista', 'veiculo', 'destino',
+        'data_hora_saida', 'km_saida', 'km_chegada',
+    ]
+    list_filter = ['data_hora_saida']
+    search_fields = ['veiculo__placa', 'destino', 'origem']
+    date_hierarchy = 'data_hora_saida'
 
 
 @admin.register(Abastecimento)
