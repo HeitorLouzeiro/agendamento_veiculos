@@ -47,8 +47,24 @@ def criar_deslocamento(request):
             return redirect('frotas:lista_deslocamentos')
     else:
         initial = {}
-        if pk := request.GET.get('trajeto'):
-            initial['trajeto'] = pk
+        trajeto_pk = request.GET.get('trajeto')
+        if trajeto_pk:
+            trajeto = (
+                Trajeto.objects
+                .select_related('agendamento__veiculo')
+                .filter(pk=trajeto_pk)
+                .first()
+            )
+            if trajeto and (is_admin or trajeto.motorista == user):
+                ag = trajeto.agendamento
+                if ag and ag.veiculo:
+                    initial['veiculo'] = ag.veiculo.pk
+                initial['origem'] = trajeto.origem
+                initial['destino'] = trajeto.destino
+                if trajeto.data_saida:
+                    initial['data_hora_saida'] = trajeto.data_saida
+                if trajeto.data_chegada:
+                    initial['data_hora_chegada'] = trajeto.data_chegada
         form = DeslocamentoForm(motorista=user, is_admin=is_admin, initial=initial)
 
     return render(
@@ -128,8 +144,44 @@ def deletar_deslocamento(request, pk):
 
 
 @login_required
+def ajax_salvar_deslocamento(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False}, status=405)
+    user = request.user
+    is_admin = user.is_administrador() or user.is_responsavel_campus()
+    form = DeslocamentoForm(request.POST, motorista=user, is_admin=is_admin)
+    if form.is_valid():
+        deslocamento = form.save(commit=False)
+        if not is_admin:
+            deslocamento.motorista = user
+        deslocamento.save()
+        dt_chegada = deslocamento.data_hora_chegada
+        return JsonResponse({
+            'success': True,
+            'id': str(deslocamento.pk),
+            'resumo': {
+                'veiculo': str(deslocamento.veiculo) if deslocamento.veiculo else '—',
+                'origem': deslocamento.origem or '—',
+                'destino': deslocamento.destino,
+                'saida': deslocamento.data_hora_saida.strftime('%d/%m/%Y %H:%M'),
+                'chegada': dt_chegada.strftime('%d/%m/%Y %H:%M') if dt_chegada else '—',
+                'km_saida': deslocamento.km_saida,
+                'km_chegada': (
+                    deslocamento.km_chegada
+                    if deslocamento.km_chegada is not None else '—'
+                ),
+            },
+            'proxima': {
+                'veiculo_id': str(deslocamento.veiculo.pk) if deslocamento.veiculo else '',
+                'km_saida': deslocamento.km_chegada if deslocamento.km_chegada is not None else '',
+                'data_hora_saida': dt_chegada.strftime('%Y-%m-%dT%H:%M') if dt_chegada else '',
+            },
+        })
+    return JsonResponse({'success': False, 'errors': form.errors}, status=422)
+
+
+@login_required
 def trajeto_detalhes_json(request, pk):
-    """Retorna dados de um trajeto em JSON para preenchimento automático."""
     trajeto = get_object_or_404(
         Trajeto.objects.select_related(
             'agendamento__veiculo', 'agendamento'

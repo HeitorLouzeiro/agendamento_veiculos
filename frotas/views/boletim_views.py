@@ -425,25 +425,38 @@ def dashboard_motorista(request):
         messages.error(request, 'Área exclusiva para motoristas.')
         return redirect('dashboard')
 
+    from datetime import timedelta
     from django.db.models import Prefetch
     from agendamentos.models import Agendamento, Trajeto
     from ..models import Deslocamento
 
+    hoje = timezone.localdate()
+    amanha = hoje + timedelta(days=1)
+
     abastecimentos = (
         Abastecimento.objects
         .filter(motorista=user)
-        .select_related('veiculo')[:5]
+        .select_related('veiculo')
+        .order_by('-data_hora')[:5]
     )
     ocorrencias = (
         Ocorrencia.objects
         .filter(motorista=user)
-        .select_related('veiculo')[:5]
+        .select_related('veiculo')
+        .order_by('-data_hora')[:5]
     )
     deslocamentos = (
         Deslocamento.objects
         .filter(motorista=user)
-        .select_related('veiculo')[:5]
+        .select_related('veiculo')
+        .order_by('-data_hora_saida')[:5]
     )
+    ocorrencias_pendentes_count = Ocorrencia.objects.filter(
+        motorista=user, resolvido=False
+    ).count()
+    total_deslocamentos = Deslocamento.objects.filter(motorista=user).count()
+    total_abastecimentos = Abastecimento.objects.filter(motorista=user).count()
+    total_ocorrencias = Ocorrencia.objects.filter(motorista=user).count()
     agendamentos_atribuidos = (
         Agendamento.objects
         .filter(trajetos__motorista=user)
@@ -452,9 +465,9 @@ def dashboard_motorista(request):
         .prefetch_related(
             Prefetch(
                 'trajetos',
-                queryset=Trajeto.objects
-                    .filter(motorista=user)
-                    .order_by('data_saida'),
+                queryset=Trajeto.objects.filter(
+                    motorista=user,
+                ).order_by('data_saida'),
                 to_attr='meus_trajetos',
             )
         )
@@ -465,6 +478,12 @@ def dashboard_motorista(request):
         'ocorrencias_recentes': ocorrencias,
         'deslocamentos_recentes': deslocamentos,
         'agendamentos_atribuidos': agendamentos_atribuidos,
+        'ocorrencias_pendentes_count': ocorrencias_pendentes_count,
+        'total_deslocamentos': total_deslocamentos,
+        'total_abastecimentos': total_abastecimentos,
+        'total_ocorrencias': total_ocorrencias,
+        'hoje': hoje,
+        'amanha': amanha,
     })
 
 
