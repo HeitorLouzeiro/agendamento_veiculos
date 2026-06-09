@@ -1,4 +1,5 @@
 from .deslocamento_views import (  # noqa: F401
+    ajax_salvar_deslocamento,
     criar_deslocamento,
     deletar_deslocamento,
     detalhe_deslocamento,

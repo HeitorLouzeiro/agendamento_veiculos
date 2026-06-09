@@ -1,9 +1,15 @@
 from django import forms
+from django.utils import timezone
 
 from agendamentos.models import Agendamento, Trajeto
 from veiculos.models import Veiculo
 
 from .models import Abastecimento, Deslocamento, Ocorrencia
+
+_REQUIRED = 'Este campo é obrigatório.'
+_INVALID_CHOICE = 'Selecione uma opção válida.'
+_INVALID_NUMBER = 'Informe um número válido.'
+_INVALID_DATETIME = 'Informe uma data e hora válidas (ex: 09/06/2026 14:30).'
 
 
 class AbastecimentoForm(forms.ModelForm):
@@ -46,6 +52,29 @@ class AbastecimentoForm(forms.ModelForm):
                 attrs={'class': 'form-control', 'rows': 3}
             ),
         }
+        error_messages = {
+            'local_posto': {'required': 'Informe o nome ou endereço do posto.'},
+            'data_hora': {
+                'required': 'Informe a data e hora do abastecimento.',
+                'invalid': _INVALID_DATETIME,
+            },
+            'km_atual': {
+                'required': 'Informe o hodômetro no momento do abastecimento.',
+                'invalid': _INVALID_NUMBER,
+            },
+            'litros_abastecidos': {
+                'required': 'Informe a quantidade de litros abastecidos.',
+                'invalid': _INVALID_NUMBER,
+            },
+            'valor_gasto': {
+                'required': 'Informe o valor pago no abastecimento.',
+                'invalid': _INVALID_NUMBER,
+            },
+            'tipo_combustivel': {
+                'required': 'Selecione o tipo de combustível.',
+                'invalid_choice': _INVALID_CHOICE,
+            },
+        }
 
     def __init__(self, *args, motorista=None, is_admin=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,6 +106,38 @@ class AbastecimentoForm(forms.ModelForm):
             )
         self.fields['agendamento'].queryset = qs_agendamento
 
+    def clean_litros_abastecidos(self):
+        litros = self.cleaned_data.get('litros_abastecidos')
+        if litros is not None and litros <= 0:
+            raise forms.ValidationError(
+                'A quantidade de litros deve ser maior que zero.'
+            )
+        return litros
+
+    def clean_valor_gasto(self):
+        valor = self.cleaned_data.get('valor_gasto')
+        if valor is not None and valor <= 0:
+            raise forms.ValidationError(
+                'O valor pago deve ser maior que zero.'
+            )
+        return valor
+
+    def clean_km_atual(self):
+        km = self.cleaned_data.get('km_atual')
+        if km is not None and km <= 0:
+            raise forms.ValidationError(
+                'O hodômetro deve ser maior que zero.'
+            )
+        return km
+
+    def clean_data_hora(self):
+        dt = self.cleaned_data.get('data_hora')
+        if dt and dt > timezone.now():
+            raise forms.ValidationError(
+                'A data do abastecimento não pode ser no futuro.'
+            )
+        return dt
+
     def clean(self):
         cleaned = super().clean()
         trajeto = cleaned.get('trajeto')
@@ -90,15 +151,12 @@ class DeslocamentoForm(forms.ModelForm):
     class Meta:
         model = Deslocamento
         fields = [
-            'trajeto',
-            'veiculo', 'agendamento', 'origem', 'destino',
+            'veiculo', 'origem', 'destino',
             'data_hora_saida', 'data_hora_chegada',
             'km_saida', 'km_chegada', 'observacoes',
         ]
         widgets = {
-            'trajeto': forms.Select(attrs={'class': 'form-select'}),
             'veiculo': forms.Select(attrs={'class': 'form-select'}),
-            'agendamento': forms.Select(attrs={'class': 'form-select'}),
             'origem': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Local de partida (opcional)',
@@ -127,85 +185,75 @@ class DeslocamentoForm(forms.ModelForm):
                 attrs={'class': 'form-control', 'rows': 3}
             ),
         }
+        error_messages = {
+            'veiculo': {
+                'required': 'Selecione o veículo utilizado.',
+                'invalid_choice': _INVALID_CHOICE,
+            },
+            'destino': {'required': 'Informe o local de destino.'},
+            'data_hora_saida': {
+                'required': 'Informe a data e hora de saída.',
+                'invalid': _INVALID_DATETIME,
+            },
+            'data_hora_chegada': {'invalid': _INVALID_DATETIME},
+            'km_saida': {
+                'required': 'Informe o hodômetro na saída.',
+                'invalid': _INVALID_NUMBER,
+            },
+            'km_chegada': {'invalid': _INVALID_NUMBER},
+        }
 
     def __init__(self, *args, motorista=None, is_admin=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.is_admin = is_admin
-
-        # Campos sempre opcionais
-        self.fields['trajeto'].required = False
-        self.fields['trajeto'].empty_label = '— Selecione um trajeto atribuído —'
-        self.fields['agendamento'].required = False
-        self.fields['agendamento'].empty_label = '— Sem agendamento vinculado —'
-        self.fields['veiculo'].required = False
+        self.fields['veiculo'].queryset = Veiculo.objects.filter(ativo=True)
+        self.fields['veiculo'].empty_label = '— Selecione o veículo —'
+        self.fields['veiculo'].required = True
         self.fields['origem'].required = False
         self.fields['data_hora_chegada'].required = False
         self.fields['km_chegada'].required = False
         self.fields['observacoes'].required = False
 
-        if motorista and not is_admin:
-            # Motorista vê apenas os trajetos atribuídos a si
-            self.fields['trajeto'].queryset = (
-                Trajeto.objects
-                .filter(motorista=motorista)
-                .select_related('agendamento__veiculo', 'agendamento__curso')
-                .order_by('-data_saida')
+    def clean_km_saida(self):
+        km = self.cleaned_data.get('km_saida')
+        if km is not None and km <= 0:
+            raise forms.ValidationError(
+                'O hodômetro de saída deve ser maior que zero.'
             )
-            # Veículo e agendamento ficam livres (preenchidos via JS/server)
-            self.fields['veiculo'].queryset = Veiculo.objects.filter(ativo=True)
-            self.fields['agendamento'].queryset = (
-                Agendamento.objects
-                .filter(status='aprovado')
-                .select_related('curso', 'veiculo')
-                .order_by('-data_inicio')
-            )
-        else:
-            # Admin vê todos os trajetos
-            self.fields['trajeto'].queryset = (
-                Trajeto.objects
-                .select_related('agendamento__veiculo', 'agendamento__curso')
-                .order_by('-data_saida')
-            )
-            self.fields['veiculo'].queryset = Veiculo.objects.filter(ativo=True)
-            self.fields['agendamento'].queryset = (
-                Agendamento.objects
-                .filter(status='aprovado')
-                .select_related('curso', 'veiculo')
-                .order_by('-data_inicio')
-            )
+        return km
 
     def clean(self):
         cleaned = super().clean()
-        trajeto = cleaned.get('trajeto')
-
-        # Se trajeto selecionado, herda veiculo e agendamento dele
-        if trajeto:
-            cleaned['veiculo'] = trajeto.agendamento.veiculo
-            cleaned['agendamento'] = trajeto.agendamento
-            if not cleaned.get('destino'):
-                cleaned['destino'] = trajeto.destino
-            if not cleaned.get('origem'):
-                cleaned['origem'] = trajeto.origem
-
-        # Valida que tem destino (obrigatório no model)
-        if not cleaned.get('destino'):
-            self.add_error('destino', 'Informe o destino.')
-
         km_saida = cleaned.get('km_saida')
         km_chegada = cleaned.get('km_chegada')
         saida = cleaned.get('data_hora_saida')
         chegada = cleaned.get('data_hora_chegada')
+
         if km_chegada is not None and km_saida is not None:
             if km_chegada < km_saida:
                 self.add_error(
                     'km_chegada',
-                    'Km na chegada não pode ser menor que o km na saída.',
+                    f'Km de chegada ({km_chegada}) não pode ser menor que o '
+                    f'de saída ({km_saida}).',
                 )
-        if chegada and saida and chegada < saida:
-            self.add_error(
-                'data_hora_chegada',
-                'Data/hora de chegada não pode ser anterior à saída.',
-            )
+            elif km_chegada == km_saida:
+                self.add_error(
+                    'km_chegada',
+                    'Km de chegada igual ao de saída — verifique os valores.',
+                )
+
+        if chegada and saida:
+            if chegada < saida:
+                self.add_error(
+                    'data_hora_chegada',
+                    'A chegada não pode ser anterior à saída '
+                    f'({saida.strftime("%d/%m/%Y %H:%M")}).',
+                )
+            elif chegada == saida:
+                self.add_error(
+                    'data_hora_chegada',
+                    'A data/hora de chegada é igual à de saída — verifique.',
+                )
+
         return cleaned
 
 
@@ -241,6 +289,24 @@ class OcorrenciaForm(forms.ModelForm):
                 'placeholder': 'Opcional',
             }),
         }
+        error_messages = {
+            'tipo': {
+                'required': 'Selecione o tipo de ocorrência.',
+                'invalid_choice': _INVALID_CHOICE,
+            },
+            'gravidade': {
+                'required': 'Selecione a gravidade da ocorrência.',
+                'invalid_choice': _INVALID_CHOICE,
+            },
+            'data_hora': {
+                'required': 'Informe a data e hora da ocorrência.',
+                'invalid': _INVALID_DATETIME,
+            },
+            'local': {'required': 'Informe o local onde a ocorrência aconteceu.'},
+            'descricao': {
+                'required': 'Descreva o que aconteceu na ocorrência.',
+            },
+        }
 
     def __init__(self, *args, motorista=None, is_admin=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -271,6 +337,22 @@ class OcorrenciaForm(forms.ModelForm):
                 .order_by('-data_saida')
             )
         self.fields['agendamento'].queryset = qs_agendamento
+
+    def clean_descricao(self):
+        descricao = self.cleaned_data.get('descricao', '').strip()
+        if descricao and len(descricao) < 20:
+            raise forms.ValidationError(
+                'Descreva a ocorrência com mais detalhes (mínimo 20 caracteres).'
+            )
+        return descricao
+
+    def clean_data_hora(self):
+        dt = self.cleaned_data.get('data_hora')
+        if dt and dt > timezone.now():
+            raise forms.ValidationError(
+                'A data da ocorrência não pode ser no futuro.'
+            )
+        return dt
 
     def clean(self):
         cleaned = super().clean()

@@ -10,6 +10,9 @@ urlpatterns = [
     path('responsavel/', views.dashboard_responsavel, name='dashboard_responsavel'),
 
     # Deslocamentos
+    path('deslocamentos/ajax/salvar/',
+         views.ajax_salvar_deslocamento,
+         name='ajax_salvar_deslocamento'),
     path('deslocamentos/trajeto/<uuid:pk>/detalhes/',
          views.trajeto_detalhes_json,
          name='trajeto_detalhes_json'),
