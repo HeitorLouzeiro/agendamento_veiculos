@@ -4,118 +4,142 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4"><i class="bi bi-sign-turn-right"></i> {{ titulo }}</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-sign-turn-right"></i> {{ titulo }}</h2>
+        <a href="{% url 'frotas:lista_deslocamentos' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    {# Viagens já salvas nesta sessão (inseridas via JS ao clicar em "+") #}
+    <div id="viagens-salvas"></div>
 
     <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">Dados do Deslocamento</h5>
-        </div>
         <div class="card-body">
-            <form method="post" novalidate id="form-deslocamento">
+            <form id="form-deslocamento" method="post" novalidate>
                 {% csrf_token %}
 
-                {# ── Seleção de Trajeto ── #}
-                {% if not form.is_admin %}
-                <div class="alert alert-info mb-4">
-                    <i class="bi bi-info-circle"></i>
-                    Selecione um trajeto atribuído para preencher automaticamente os dados da viagem,
-                    ou deixe em branco para preencher manualmente.
-                </div>
-                {% endif %}
-
-                <h5 class="mb-3">Trajeto Atribuído</h5>
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <label class="form-label">{{ form.trajeto.label }}</label>
-                        {{ form.trajeto }}
-                        {% if form.trajeto.errors %}<div class="text-danger small">{{ form.trajeto.errors }}</div>{% endif %}
-                        <div class="form-text">Selecionando um trajeto, os campos abaixo serão preenchidos automaticamente.</div>
-                    </div>
-                </div>
-
-                <hr>
-                <h5 class="mb-3">Veículo e Agendamento</h5>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.veiculo.label }}</label>
-                        <div id="veiculo-display" class="form-control bg-light text-muted d-none"></div>
-                        <input type="hidden" id="id_veiculo_hidden" name="veiculo">
-                        <div id="veiculo-select-wrap">{{ form.veiculo }}</div>
-                        {% if form.veiculo.errors %}<div class="text-danger small">{{ form.veiculo.errors }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.agendamento.label }}</label>
-                        <div id="agendamento-display" class="form-control bg-light text-muted d-none"></div>
-                        <input type="hidden" id="id_agendamento_hidden" name="agendamento">
-                        <div id="agendamento-select-wrap">{{ form.agendamento }}</div>
-                        {% if form.agendamento.errors %}<div class="text-danger small">{{ form.agendamento.errors }}</div>{% endif %}
-                    </div>
-                </div>
-
-                <hr>
-                <h5 class="mb-3">Rota</h5>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.origem.label }}</label>
-                        {{ form.origem }}
-                        {% if form.origem.errors %}<div class="text-danger small">{{ form.origem.errors }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.destino.label }} <span class="text-danger">*</span></label>
-                        {{ form.destino }}
-                        {% if form.destino.errors %}<div class="text-danger small">{{ form.destino.errors }}</div>{% endif %}
-                    </div>
-                </div>
-
-                <hr>
-                <h5 class="mb-3">Datas e Horários</h5>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.data_hora_saida.label }} <span class="text-danger">*</span></label>
-                        {{ form.data_hora_saida }}
-                        {% if form.data_hora_saida.errors %}<div class="text-danger small">{{ form.data_hora_saida.errors }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.data_hora_chegada.label }}</label>
-                        {{ form.data_hora_chegada }}
-                        {% if form.data_hora_chegada.errors %}<div class="text-danger small">{{ form.data_hora_chegada.errors }}</div>{% endif %}
-                    </div>
-                </div>
-
-                <hr>
-                <h5 class="mb-3">Odômetro (Km)</h5>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.km_saida.label }} <span class="text-danger">*</span></label>
-                        {{ form.km_saida }}
-                        {% if form.km_saida.errors %}<div class="text-danger small">{{ form.km_saida.errors }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.km_chegada.label }}</label>
-                        {{ form.km_chegada }}
-                        {% if form.km_chegada.errors %}<div class="text-danger small">{{ form.km_chegada.errors }}</div>{% endif %}
-                    </div>
-                </div>
-
-                <hr>
-                <div class="mb-3">
-                    <label class="form-label">{{ form.observacoes.label }}</label>
-                    {{ form.observacoes }}
-                    {% if form.observacoes.errors %}<div class="text-danger small">{{ form.observacoes.errors }}</div>{% endif %}
-                </div>
-
                 {% if form.non_field_errors %}
-                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                <div class="alert alert-danger">
+                    {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+                </div>
                 {% endif %}
 
-                <div class="d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-primary">
+                {# Veículo #}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="{{ form.veiculo.id_for_label }}">
+                        <i class="bi bi-car-front"></i> Veículo
+                    </label>
+                    {{ form.veiculo }}
+                    {% if form.veiculo.errors %}
+                    <div class="invalid-feedback d-block">{{ form.veiculo.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                {# Rota #}
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.origem.id_for_label }}">
+                            Origem <small class="text-muted">(opcional)</small>
+                        </label>
+                        {{ form.origem }}
+                        {% if form.origem.errors %}
+                        <div class="invalid-feedback d-block">{{ form.origem.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="{{ form.destino.id_for_label }}">
+                            Destino
+                        </label>
+                        {{ form.destino }}
+                        {% if form.destino.errors %}
+                        <div class="invalid-feedback d-block">{{ form.destino.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Partida | Chegada #}
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="card border-success h-100">
+                            <div class="card-header bg-success bg-opacity-10 text-success fw-semibold py-2">
+                                <i class="bi bi-box-arrow-right"></i> Partida
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <label class="form-label" for="{{ form.data_hora_saida.id_for_label }}">
+                                        Data e Hora
+                                    </label>
+                                    {{ form.data_hora_saida }}
+                                    {% if form.data_hora_saida.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.data_hora_saida.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="form-label" for="{{ form.km_saida.id_for_label }}">
+                                        Odômetro (km)
+                                    </label>
+                                    {{ form.km_saida }}
+                                    {% if form.km_saida.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.km_saida.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-primary h-100">
+                            <div class="card-header bg-primary bg-opacity-10 text-primary fw-semibold py-2">
+                                <i class="bi bi-box-arrow-in-right"></i> Chegada
+                                <small class="text-muted fw-normal">(opcional)</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <label class="form-label" for="{{ form.data_hora_chegada.id_for_label }}">
+                                        Data e Hora
+                                    </label>
+                                    {{ form.data_hora_chegada }}
+                                    {% if form.data_hora_chegada.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.data_hora_chegada.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="form-label" for="{{ form.km_chegada.id_for_label }}">
+                                        Odômetro (km)
+                                    </label>
+                                    {{ form.km_chegada }}
+                                    {% if form.km_chegada.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.km_chegada.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Observações #}
+                <div class="mb-4">
+                    <label class="form-label" for="{{ form.observacoes.id_for_label }}">
+                        Observações <small class="text-muted">(opcional)</small>
+                    </label>
+                    {{ form.observacoes }}
+                </div>
+
+                {# Botões #}
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="submit" class="btn btn-success">
                         <i class="bi bi-check-circle"></i> Salvar
                     </button>
-                    <a href="{% url 'frotas:lista_deslocamentos' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Cancelar
+                    <button type="button" id="btn-mais" class="btn btn-outline-primary">
+                        <i class="bi bi-plus-circle"></i> Adicionar outra viagem
+                    </button>
+                    <a href="{% url 'frotas:lista_deslocamentos' %}" class="btn btn-outline-secondary ms-auto">
+                        Cancelar
                     </a>
                 </div>
+
+                {# Feedback AJAX #}
+                <div id="ajax-feedback" class="mt-3" style="display:none;"></div>
             </form>
         </div>
     </div>
@@ -125,83 +149,92 @@
 {% block extra_js %}
 <script>
 (function () {
-    const trajetoSelect = document.getElementById('id_trajeto');
-    if (!trajetoSelect) return;
+    const ajaxUrl = '{% url "frotas:ajax_salvar_deslocamento" %}';
+    const form = document.getElementById('form-deslocamento');
+    const btnMais = document.getElementById('btn-mais');
+    const feedback = document.getElementById('ajax-feedback');
+    const container = document.getElementById('viagens-salvas');
 
-    const veiculoDisplay    = document.getElementById('veiculo-display');
-    const veiculoSelectWrap = document.getElementById('veiculo-select-wrap');
-    const veiculoHidden     = document.getElementById('id_veiculo_hidden');
-    const agendDisplay      = document.getElementById('agendamento-display');
-    const agendSelectWrap   = document.getElementById('agendamento-select-wrap');
-    const agendHidden       = document.getElementById('id_agendamento_hidden');
-    const origemInput       = document.getElementById('id_origem');
-    const destinoInput      = document.getElementById('id_destino');
-    const dataSaidaInput    = document.getElementById('id_data_hora_saida');
-    const dataChegadaInput  = document.getElementById('id_data_hora_chegada');
-
-    function lockFields(lock) {
-        if (lock) {
-            veiculoDisplay.classList.remove('d-none');
-            veiculoSelectWrap.classList.add('d-none');
-            agendDisplay.classList.remove('d-none');
-            agendSelectWrap.classList.add('d-none');
-            if (origemInput) origemInput.readOnly = true;
-            if (destinoInput) destinoInput.readOnly = true;
-        } else {
-            veiculoDisplay.classList.add('d-none');
-            veiculoSelectWrap.classList.remove('d-none');
-            agendDisplay.classList.add('d-none');
-            agendSelectWrap.classList.remove('d-none');
-            veiculoHidden.value = '';
-            agendHidden.value = '';
-            if (origemInput) origemInput.readOnly = false;
-            if (destinoInput) destinoInput.readOnly = false;
-        }
+    function appendCard(resumo, id) {
+        const div = document.createElement('div');
+        div.className = 'alert alert-success d-flex justify-content-between align-items-start mb-2';
+        div.innerHTML =
+            '<div>' +
+            '<strong><i class="bi bi-check-circle-fill me-1"></i>' + resumo.veiculo + '</strong>' +
+            ' — ' + resumo.origem + ' → <strong>' + resumo.destino + '</strong><br>' +
+            '<small>' +
+            'Partida: ' + resumo.saida + ' | Km: ' + resumo.km_saida +
+            ' &nbsp;·&nbsp; ' +
+            'Chegada: ' + resumo.chegada + ' | Km: ' + resumo.km_chegada +
+            '</small>' +
+            '</div>' +
+            '<a href="/frotas/deslocamentos/' + id + '/" class="btn btn-sm btn-outline-success ms-3" target="_blank">' +
+            '<i class="bi bi-eye"></i>' +
+            '</a>';
+        container.insertBefore(div, container.firstChild);
     }
 
-    function loadTrajeto(trajetoId) {
-        if (!trajetoId) {
-            lockFields(false);
-            return;
+    function showErrors(errors) {
+        let html = '<div class="alert alert-danger"><ul class="mb-0">';
+        for (const field in errors) {
+            const label = field === '__all__' ? 'Geral' : field;
+            errors[field].forEach(function (m) {
+                html += '<li><strong>' + label + ':</strong> ' + m + '</li>';
+            });
         }
+        html += '</ul></div>';
+        feedback.innerHTML = html;
+        feedback.style.display = '';
+        feedback.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 
-        fetch(`/frotas/deslocamentos/trajeto/${trajetoId}/detalhes/`, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.erro) {
-                console.warn(data.erro);
-                lockFields(false);
-                return;
+    function resetForm(proxima) {
+        form.reset();
+        if (proxima) {
+            if (proxima.veiculo_id) {
+                form.querySelector('[name=veiculo]').value = proxima.veiculo_id;
             }
-            // Preenche campos somente-leitura
-            veiculoDisplay.textContent = data.veiculo_texto;
-            veiculoHidden.value = data.veiculo_id;
-            agendDisplay.textContent = data.agendamento_texto;
-            agendHidden.value = data.agendamento_id;
-            if (origemInput && !origemInput.value) origemInput.value = data.origem;
-            if (destinoInput && !destinoInput.value) destinoInput.value = data.destino;
-            if (dataSaidaInput && !dataSaidaInput.value) dataSaidaInput.value = data.data_saida;
-            if (dataChegadaInput && !dataChegadaInput.value) dataChegadaInput.value = data.data_chegada;
-            lockFields(true);
+            if (proxima.km_saida !== '') {
+                form.querySelector('[name=km_saida]').value = proxima.km_saida;
+            }
+            if (proxima.data_hora_saida) {
+                form.querySelector('[name=data_hora_saida]').value = proxima.data_hora_saida;
+            }
+        }
+        feedback.style.display = 'none';
+        const destino = form.querySelector('[name=destino]');
+        if (destino) { destino.focus(); }
+    }
+
+    btnMais.addEventListener('click', function () {
+        btnMais.disabled = true;
+        btnMais.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Salvando...';
+        feedback.style.display = 'none';
+
+        const fd = new FormData(form);
+        fetch(ajaxUrl, {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
         })
-        .catch(() => lockFields(false));
-    }
-
-    trajetoSelect.addEventListener('change', function () {
-        // Limpa campos de rota ao trocar trajeto para evitar dados antigos
-        if (origemInput) origemInput.value = '';
-        if (destinoInput) destinoInput.value = '';
-        if (dataSaidaInput) dataSaidaInput.value = '';
-        if (dataChegadaInput) dataChegadaInput.value = '';
-        loadTrajeto(this.value);
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (data.success) {
+                appendCard(data.resumo, data.id);
+                resetForm(data.proxima);
+            } else {
+                showErrors(data.errors);
+            }
+        })
+        .catch(function () {
+            feedback.innerHTML = '<div class="alert alert-danger">Erro de comunicação. Tente novamente.</div>';
+            feedback.style.display = '';
+        })
+        .finally(function () {
+            btnMais.disabled = false;
+            btnMais.innerHTML = '<i class="bi bi-plus-circle"></i> Adicionar outra viagem';
+        });
     });
-
-    // Inicializa se já há um trajeto selecionado (edição)
-    if (trajetoSelect.value) {
-        loadTrajeto(trajetoSelect.value);
-    }
 })();
 </script>
 {% endblock %}
