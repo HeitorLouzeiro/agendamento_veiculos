@@ -21,7 +21,7 @@
                         </div>
                         <div class="col-md-6">
                             <small class="text-muted">Motorista</small>
-                            <p class="mb-0">{{ deslocamento.motorista.get_full_name|default:deslocamento.motorista.username }}</p>
+                            <p class="mb-0">{% if deslocamento.motorista %}{{ deslocamento.motorista.get_full_name|default:deslocamento.motorista.username }}{% else %}—{% endif %}</p>
                         </div>
                     </div>
 

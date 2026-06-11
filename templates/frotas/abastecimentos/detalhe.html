@@ -47,7 +47,7 @@
                         {% endif %}
 
                         <dt class="col-sm-4">Motorista</dt>
-                        <dd class="col-sm-8">{{ abastecimento.motorista.get_full_name|default:abastecimento.motorista.username }}</dd>
+                        <dd class="col-sm-8">{% if abastecimento.motorista %}{{ abastecimento.motorista.get_full_name|default:abastecimento.motorista.username }}{% else %}—{% endif %}</dd>
 
                         {% if abastecimento.agendamento %}
                         <dt class="col-sm-4">Agendamento</dt>

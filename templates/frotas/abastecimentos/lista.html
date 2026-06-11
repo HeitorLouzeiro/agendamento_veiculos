@@ -38,7 +38,7 @@
                             <td>{{ a.litros_abastecidos }} L</td>
                             <td>R$ {{ a.valor_gasto }}</td>
                             <td>{{ a.km_atual }} km</td>
-                            <td>{{ a.motorista.get_full_name|default:a.motorista.username }}</td>
+                            <td>{% if a.motorista %}{{ a.motorista.get_full_name|default:a.motorista.username }}{% else %}—{% endif %}</td>
                             <td class="text-end">
                                 <a href="{% url 'frotas:detalhe_abastecimento' a.pk %}" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-eye"></i>
